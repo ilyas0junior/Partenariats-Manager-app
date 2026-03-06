@@ -4,6 +4,88 @@ Copiez chaque bloc de code dans un visualiseur Mermaid (ex: [mermaid.live](https
 
 ---
 
+## 0. Structure du projet (dossiers et flux)
+
+```mermaid
+flowchart TB
+  subgraph Root["Répertoire racine"]
+    Server["server.mjs\n(Express API)"]
+    DockerCompose["docker-compose.yml"]
+    DockerfileServer["Dockerfile.server"]
+  end
+
+  subgraph FrontendDir["agent-hub-main/"]
+    Vite["vite.config.ts"]
+    subgraph Src["src/"]
+      App["App.tsx"]
+      Main["main.tsx"]
+      subgraph Pages["pages/"]
+        Auth["Auth.tsx"]
+        Dashboard["Dashboard.tsx"]
+        AdminUsers["AdminUsers.tsx"]
+        NotFound["NotFound.tsx"]
+      end
+      subgraph Components["components/"]
+        AppHeader["AppHeader.tsx"]
+        PartenariatTable["PartenariatTable.tsx"]
+        PartenariatForm["PartenariatForm.tsx"]
+        PartenariatDetail["PartenariatDetail.tsx"]
+        PartenariatStats["PartenariatStats.tsx"]
+        StatusBadge["StatusBadge.tsx"]
+        UI["ui/ (shadcn)"]
+      end
+      subgraph Hooks["hooks/"]
+        useAuth["useAuth.ts"]
+        usePartenariats["usePartenariats.ts"]
+        useAdminUsers["useAdminUsers.ts"]
+      end
+      Lib["lib/utils.ts"]
+    end
+  end
+
+  subgraph Docker["Docker Compose"]
+    Mongo["mongo (MongoDB:27017)"]
+    ServerC["server (API:4000)"]
+    Web["web (Vite:8080)"]
+  end
+
+  subgraph MongoDB["Base agent_hub"]
+    ColUsers["users"]
+    ColLogs["user_logs"]
+    ColPartenariats["partenariats"]
+  end
+
+  Root --> Server
+  Root --> Docker
+  App --> Pages
+  App --> Components
+  App --> Hooks
+  Server --> MongoDB
+  Docker --> Mongo
+  ServerC --> Mongo
+  Web --> ServerC
+```
+
+```mermaid
+flowchart LR
+  subgraph Structure["Arborescence simplifiée"]
+    direction TB
+    A["agent-hub-main/"] --> B["src/"]
+    B --> C["pages/"]
+    B --> D["components/"]
+    B --> E["hooks/"]
+    B --> F["lib/"]
+    C --> C1["Auth, Dashboard, AdminUsers, NotFound"]
+    D --> D1["AppHeader, Partenariat*, StatusBadge, ui/"]
+    E --> E1["useAuth, usePartenariats, useAdminUsers"]
+    R["Racine"] --> G["server.mjs"]
+    R --> H["docker-compose.yml"]
+    R --> A
+  end
+```
+
+---
+
 ## 1. Architecture globale
 
 ```mermaid
@@ -31,7 +113,7 @@ flowchart TB
     API --> PartenariatsAPI["/api/partenariats"]
   end
 
-  subgraph DB["SQLite (data.db)"]
+  subgraph DB["MongoDB (agent_hub)"]
     users[(users)]
     partenariats[(partenariats)]
     user_logs[(user_logs)]
@@ -72,26 +154,28 @@ flowchart LR
 ```mermaid
 erDiagram
   users {
-    int id PK
+    ObjectId _id PK
     string email UK
     string full_name
     string password_hash
-    string role "admin | spectate"
+    string role "admin | editor | spectate | ajouter | modifier | suppression"
     string nickname
+    string company_name
     string status "pending | approved | rejected"
+    string created_at
   }
 
   user_logs {
-    int id PK
-    int user_id FK
-    string action "login"
+    ObjectId _id PK
+    string user_id FK
+    string action "login | create_partenariat | ..."
     string details
     string created_at
   }
 
   partenariats {
-    int id PK
-    string titre UK
+    ObjectId _id PK
+    string titre
     string type_partenariat
     string nature
     string domaine
@@ -100,9 +184,11 @@ erDiagram
     string partenaire
     string date_debut
     string date_fin
+    string date_prise_effet
     string statut
     string description
-    int created_by FK
+    string company_name
+    string created_by FK
     string created_at
     string updated_at
   }
@@ -203,13 +289,15 @@ flowchart LR
   end
 
   subgraph Admin["Admin (X-User-Id + role=admin)"]
+    POST_users["POST /api/users\n+ partenariatIds"]
     GET_users["GET /api/users\n+ lastLogin"]
     GET_pending["GET /api/users/pending"]
     GET_logs["GET /api/logs"]
+    GET_companies["GET /api/companies"]
     PATCH_user["PATCH /api/users/:id"]
   end
 
-  subgraph Partenariats["Partenariats"]
+  subgraph Partenariats["Partenariats (requireUser, filtre company_name)"]
     GET_p["GET /api/partenariats"]
     POST_p["POST /api/partenariats"]
     PUT_p["PUT /api/partenariats/:id"]

@@ -1,7 +1,11 @@
 import express from "express";
 import cors from "cors";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import { MongoClient, ObjectId } from "mongodb";
+
+const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-in-production";
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 
 const app = express();
 const PORT = 4000;
@@ -18,8 +22,35 @@ let userLogsCol;
 /** @type {import("mongodb").Collection} */
 let partenariatsCol;
 
+/** Roles: admin (tout, toutes entreprises), editor (créer/modifier/supprimer son entreprise), spectate (lecture son entreprise), ajouter/modifier/suppression (action unique, son entreprise) */
+const ROLES = ["admin", "editor", "spectate", "ajouter", "modifier", "suppression"];
+
+function roleToPermissions(role) {
+  switch (role) {
+    case "admin":
+      return { canCreatePartenariat: true, canEditPartenariat: true, canDeletePartenariat: true };
+    case "editor":
+      return { canCreatePartenariat: true, canEditPartenariat: true, canDeletePartenariat: true };
+    case "ajouter":
+      return { canCreatePartenariat: true, canEditPartenariat: false, canDeletePartenariat: false };
+    case "modifier":
+      return { canCreatePartenariat: false, canEditPartenariat: true, canDeletePartenariat: false };
+    case "suppression":
+      return { canCreatePartenariat: false, canEditPartenariat: false, canDeletePartenariat: true };
+    default:
+      return { canCreatePartenariat: false, canEditPartenariat: false, canDeletePartenariat: false };
+  }
+}
+
+function normalizeRole(doc) {
+  const r = doc.role;
+  if (ROLES.includes(r)) return r;
+  return "spectate";
+}
+
 function serializeUser(doc, includeStatus = false) {
-  const role = doc.role === "admin" ? "admin" : "spectate";
+  const role = normalizeRole(doc);
+  const perms = roleToPermissions(role);
   const u = {
     id: String(doc._id),
     email: doc.email,
@@ -27,6 +58,7 @@ function serializeUser(doc, includeStatus = false) {
     role,
     nickname: doc.nickname ?? doc.full_name ?? doc.email ?? "",
     companyName: doc.company_name ?? null,
+    ...perms,
   };
   if (includeStatus) u.status = doc.status ?? "approved";
   return u;
@@ -39,54 +71,81 @@ function isAdminDoc(user) {
   return user.role === "admin" || (user.email && ADMIN_EMAILS.includes(user.email));
 }
 
-async function requireUser(req, res, next) {
-  const userId = req.headers["x-user-id"];
-  if (!userId) {
-    return res.status(401).json({ message: "Non connecté." });
-  }
-  let user = null;
-  try {
-    user = await usersCol.findOne(
-      { _id: new ObjectId(String(userId)), status: "approved" },
-      { projection: { password_hash: 0 } }
-    );
-  } catch (_e) {}
-  if (!user) {
-    return res.status(401).json({ message: "Session invalide ou expirée. Déconnectez-vous puis reconnectez-vous." });
-  }
+function setReqUser(req, user) {
   req.user = user;
   req.userId = String(user._id);
   req.isAdmin = isAdminDoc(user);
+  const role = normalizeRole(user);
+  const perms = req.isAdmin ? roleToPermissions("admin") : roleToPermissions(role);
+  req.canCreatePartenariat = perms.canCreatePartenariat;
+  req.canEditPartenariat = perms.canEditPartenariat;
+  req.canDeletePartenariat = perms.canDeletePartenariat;
+  req.canEditPartenariats = req.canCreatePartenariat || req.canEditPartenariat || req.canDeletePartenariat;
+}
+
+/** Résout l'utilisateur depuis Authorization: Bearer <jwt> ou X-User-Id. À appeler avant requireUser/requireAdmin. */
+async function resolveAuth(req, res, next) {
+  const authz = req.headers.authorization || req.headers.Authorization;
+  const bearer = authz && String(authz).startsWith("Bearer ");
+  const token = bearer ? String(authz).slice(7).trim() : null;
+  if (token) {
+    try {
+      const payload = jwt.verify(token, JWT_SECRET);
+      const userId = payload.sub;
+      if (userId) {
+        const user = await usersCol.findOne(
+          { _id: new ObjectId(String(userId)), status: "approved" },
+          { projection: { password_hash: 0 } }
+        );
+        if (user) {
+          setReqUser(req, user);
+          next();
+          return;
+        }
+      }
+    } catch (_e) {}
+  }
+  const userId = req.headers["x-user-id"] || req.headers["X-User-Id"];
+  const userEmail = req.headers["x-user-email"] || req.headers["X-User-Email"];
+  if (userId) {
+    try {
+      const user = await usersCol.findOne(
+        { _id: new ObjectId(String(userId)), status: "approved" },
+        { projection: { password_hash: 0 } }
+      );
+      if (user) {
+        setReqUser(req, user);
+        next();
+        return;
+      }
+    } catch (_e) {}
+  }
+  if (userEmail && ADMIN_EMAILS.includes(userEmail)) {
+    const user = await usersCol.findOne(
+      { email: userEmail, status: "approved" },
+      { projection: { password_hash: 0 } }
+    );
+    if (user) {
+      setReqUser(req, user);
+      next();
+      return;
+    }
+  }
+  next();
+}
+
+async function requireUser(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({ message: "Non connecté." });
+  }
   next();
 }
 
 async function requireAdmin(req, res, next) {
-  const userId = req.headers["x-user-id"] || req.headers["X-User-Id"];
-  const userEmail = req.headers["x-user-email"] || req.headers["X-User-Email"];
-  if (!userId && !userEmail) {
+  if (!req.user) {
     return res.status(401).json({ message: "Non autorisé." });
   }
-  let user = null;
-  if (userId) {
-    try {
-      user = await usersCol.findOne(
-        { _id: new ObjectId(userId), status: "approved" },
-        { projection: { id: 1, role: 1, email: 1 } }
-      );
-    } catch (_e) {}
-  }
-  if (!user && userEmail && ADMIN_EMAILS.includes(userEmail)) {
-    user = await usersCol.findOne(
-      { email: userEmail, status: "approved" },
-      { projection: { _id: 1, role: 1, email: 1 } }
-    );
-  }
-  if (!user) {
-    return res.status(401).json({
-      message: "Session invalide ou expirée. Déconnectez-vous puis reconnectez-vous.",
-    });
-  }
-  if (!isAdminDoc(user)) {
+  if (!isAdminDoc(req.user)) {
     return res.status(403).json({ message: "Accès réservé à l'administrateur." });
   }
   next();
@@ -107,6 +166,7 @@ function serializePartenariat(doc) {
     date_prise_effet: doc.date_prise_effet ?? null,
     statut: doc.statut,
     description: doc.description,
+    company_name: doc.company_name ?? null,
     created_by: doc.created_by != null ? String(doc.created_by) : null,
     created_at: doc.created_at,
     updated_at: doc.updated_at,
@@ -124,6 +184,9 @@ function toObjectId(id, res) {
 
 app.use(cors());
 app.use(express.json());
+
+// Résolution utilisateur pour toutes les routes /api (Bearer JWT ou X-User-Id)
+app.use("/api", resolveAuth);
 
 // ---------- AUTH ----------
 app.post("/api/register", async (req, res) => {
@@ -159,30 +222,24 @@ app.post("/api/login", async (req, res) => {
     created_at: now,
   }).catch(() => {});
 
-  res.json(serializeUser(user));
+  const token = jwt.sign(
+    { sub: String(user._id), email: user.email },
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRES_IN }
+  );
+  res.json({ ...serializeUser(user), token });
 });
 
-app.get("/api/me", async (req, res) => {
-  const userId = req.headers["x-user-id"];
-  if (!userId) {
+app.get("/api/me", (req, res) => {
+  if (!req.user) {
     return res.status(401).json({ message: "Non connecté." });
   }
-  let user = null;
-  try {
-    user = await usersCol.findOne(
-      { _id: new ObjectId(userId), status: "approved" },
-      { projection: { password_hash: 0 } }
-    );
-  } catch (_e) {}
-  if (!user) {
-    return res.status(401).json({ message: "Session invalide." });
-  }
-  res.json(serializeUser(user));
+  res.json(serializeUser(req.user));
 });
 
 // ---------- ADMIN: USERS ----------
 app.post("/api/users", requireAdmin, async (req, res) => {
-  const { email, password, fullName, companyName, role, nickname } = req.body ?? {};
+  const { email, password, fullName, companyName, role, nickname, partenariatIds } = req.body ?? {};
   if (!email || !password || !fullName || !companyName) {
     return res.status(400).json({
       message: "Champs obligatoires: email, mot de passe, nom complet, nom d'entreprise.",
@@ -193,7 +250,7 @@ app.post("/api/users", requireAdmin, async (req, res) => {
   const cleanFullName = String(fullName).trim();
   const cleanCompanyName = String(companyName).trim();
   const cleanNickname = nickname != null ? String(nickname).trim() : "";
-  const cleanRole = role === "admin" ? "admin" : "spectate";
+  const cleanRole = ROLES.includes(role) ? role : "spectate";
 
   if (!cleanEmail || !cleanFullName || !cleanCompanyName) {
     return res.status(400).json({ message: "Champs invalides." });
@@ -218,6 +275,35 @@ app.post("/api/users", requireAdmin, async (req, res) => {
   };
   const result = await usersCol.insertOne(doc);
   const row = await usersCol.findOne({ _id: result.insertedId }, { projection: { password_hash: 0 } });
+  const adminUserId = req.headers["x-user-id"] || req.headers["X-User-Id"];
+  await userLogsCol.insertOne({
+    user_id: adminUserId || "system",
+    action: "create_user",
+    details: `Création: ${cleanEmail} (${cleanRole})`,
+    created_at: now,
+  }).catch(() => {});
+
+  // Affecter les partenariats sélectionnés à l'entreprise du nouvel utilisateur
+  const ids = Array.isArray(partenariatIds) ? partenariatIds : [];
+  if (ids.length > 0) {
+    const objectIds = ids
+      .filter((id) => id != null && String(id).trim())
+      .map((id) => {
+        try {
+          return new ObjectId(String(id));
+        } catch (_e) {
+          return null;
+        }
+      })
+      .filter(Boolean);
+    if (objectIds.length > 0) {
+      await partenariatsCol.updateMany(
+        { _id: { $in: objectIds } },
+        { $set: { company_name: cleanCompanyName, updated_at: now } }
+      ).catch(() => {});
+    }
+  }
+
   res.status(201).json(serializeUser(row, true));
 });
 
@@ -308,7 +394,7 @@ app.patch("/api/users/:id", requireAdmin, async (req, res) => {
 
   const update = {};
   if (status !== undefined && ["pending", "approved", "rejected"].includes(status)) update.status = status;
-  if (role !== undefined && ["admin", "spectate"].includes(role)) update.role = role;
+  if (role !== undefined && ROLES.includes(role)) update.role = role;
   if (nickname !== undefined) update.nickname = String(nickname).trim() || null;
   if (companyName !== undefined) update.company_name = String(companyName).trim() || null;
 
@@ -317,8 +403,56 @@ app.patch("/api/users/:id", requireAdmin, async (req, res) => {
   }
 
   await usersCol.updateOne({ _id: oid }, { $set: update });
+  const adminUserId = req.headers["x-user-id"] || req.headers["X-User-Id"];
+  await userLogsCol.insertOne({
+    user_id: adminUserId || "system",
+    action: "update_user",
+    details: `Modification utilisateur ${id}: ${JSON.stringify(update)}`,
+    created_at: new Date().toISOString(),
+  }).catch(() => {});
   const row = await usersCol.findOne({ _id: oid }, { projection: { password_hash: 0 } });
   res.json(serializeUser(row, true));
+});
+
+/** Affecter des partenariats à l'entreprise d'un utilisateur (admin). Met à jour company_name des partenariats. */
+app.put("/api/users/:id/partenariats", requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  const oid = toObjectId(id, res);
+  if (!oid) return;
+  const { partenariatIds } = req.body ?? {};
+  const targetUser = await usersCol.findOne({ _id: oid }, { projection: { company_name: 1 } });
+  if (!targetUser) {
+    return res.status(404).json({ message: "Utilisateur non trouvé." });
+  }
+  const companyName = targetUser.company_name != null && String(targetUser.company_name).trim()
+    ? String(targetUser.company_name).trim()
+    : null;
+  const ids = Array.isArray(partenariatIds) ? partenariatIds : [];
+  const objectIds = ids
+    .filter((id) => id != null && String(id).trim())
+    .map((id) => {
+      try {
+        return new ObjectId(String(id));
+      } catch (_e) {
+        return null;
+      }
+    })
+    .filter(Boolean);
+  const now = new Date().toISOString();
+  if (objectIds.length > 0) {
+    await partenariatsCol.updateMany(
+      { _id: { $in: objectIds } },
+      { $set: { company_name: companyName, updated_at: now } }
+    ).catch(() => {});
+  }
+  const adminUserId = req.userId || "system";
+  await userLogsCol.insertOne({
+    user_id: adminUserId,
+    action: "update_user",
+    details: `Affectation partenariats utilisateur ${id} (${objectIds.length} partenariats)`,
+    created_at: now,
+  }).catch(() => {});
+  res.json({ ok: true, count: objectIds.length });
 });
 
 const SEED_ADMINS = [
@@ -352,19 +486,35 @@ async function seedAdmins() {
   }
 }
 
+// Liste des entreprises (noms distincts des utilisateurs) pour affecter un partenariat (admin).
+app.get("/api/companies", requireAdmin, async (req, res) => {
+  const companies = await usersCol.distinct("company_name", { company_name: { $exists: true, $ne: null, $ne: "" } });
+  res.json(companies.filter(Boolean).sort());
+});
+
 // ---------- PARTENARIATS ----------
+// Admin: tous les partenariats. Autres rôles: uniquement ceux de leur entreprise (company_name).
 app.get("/api/partenariats", requireUser, async (req, res) => {
   const company = req.user && typeof req.user.company_name === "string" ? req.user.company_name.trim() : "";
-  const filter = req.isAdmin
-    ? {}
-    : company
-      ? { $or: [{ company_name: company }, { created_by: req.userId }] }
-      : { created_by: req.userId };
+  const filter = req.isAdmin ? {} : (company ? { company_name: company } : { created_by: req.userId });
   const rows = await partenariatsCol.find(filter).sort({ created_at: -1 }).toArray();
   res.json(rows.map(serializePartenariat));
 });
 
+function validatePartenariatDates(date_debut, date_fin, date_prise_effet) {
+  if (date_debut && date_fin && date_fin < date_debut) {
+    return "La date de fin ne peut pas être antérieure à la date de début.";
+  }
+  if (date_debut && date_prise_effet && date_prise_effet < date_debut) {
+    return "La date de prise d'effet ne peut pas être antérieure à la date de début.";
+  }
+  return null;
+}
+
 app.post("/api/partenariats", requireUser, async (req, res) => {
+  if (!req.canCreatePartenariat) {
+    return res.status(403).json({ message: "Vous n'avez pas le droit de créer un partenariat." });
+  }
   const {
     titre,
     type_partenariat,
@@ -378,13 +528,19 @@ app.post("/api/partenariats", requireUser, async (req, res) => {
     date_prise_effet = null,
     statut,
     description = null,
+    company_name: bodyCompany,
   } = req.body;
 
   if (!titre || !type_partenariat || !nature || !domaine || !entite_cnss || !partenaire || !statut) {
     return res.status(400).json({ message: "Champs obligatoires manquants." });
   }
+  const dateErr = validatePartenariatDates(date_debut, date_fin, date_prise_effet);
+  if (dateErr) return res.status(400).json({ message: dateErr });
 
-  const company = req.user && typeof req.user.company_name === "string" ? req.user.company_name.trim() : null;
+  let company = req.user && typeof req.user.company_name === "string" ? req.user.company_name.trim() : null;
+  if (req.isAdmin && bodyCompany !== undefined) {
+    company = typeof bodyCompany === "string" && bodyCompany.trim() ? bodyCompany.trim() : null;
+  }
   const existing = await partenariatsCol.findOne({ titre, company_name: company });
   if (existing) {
     return res.status(400).json({ message: "Un partenariat avec ce titre existe déjà." });
@@ -410,11 +566,20 @@ app.post("/api/partenariats", requireUser, async (req, res) => {
     updated_at: now,
   };
   const result = await partenariatsCol.insertOne(doc);
+  await userLogsCol.insertOne({
+    user_id: req.userId,
+    action: "create_partenariat",
+    details: titre,
+    created_at: now,
+  }).catch(() => {});
   const row = await partenariatsCol.findOne({ _id: result.insertedId });
   res.status(201).json(serializePartenariat(row));
 });
 
 app.put("/api/partenariats/:id", requireUser, async (req, res) => {
+  if (!req.canEditPartenariat) {
+    return res.status(403).json({ message: "Vous n'avez pas le droit de modifier un partenariat." });
+  }
   const { id } = req.params;
   const oid = toObjectId(id, res);
   if (!oid) return;
@@ -442,16 +607,24 @@ app.put("/api/partenariats/:id", requireUser, async (req, res) => {
     date_prise_effet = existing.date_prise_effet,
     statut = existing.statut,
     description = existing.description,
+    company_name: bodyCompany,
   } = req.body;
+
+  let companyName = existing.company_name ?? null;
+  if (req.isAdmin && bodyCompany !== undefined) {
+    companyName = typeof bodyCompany === "string" && bodyCompany.trim() ? bodyCompany.trim() : null;
+  }
 
   const duplicate = await partenariatsCol.findOne({
     titre,
-    company_name: existing.company_name ?? null,
+    company_name: companyName,
     _id: { $ne: oid },
   });
   if (duplicate) {
-    return res.status(400).json({ message: "Un partenariat avec ce titre existe déjà." });
+    return res.status(400).json({ message: "Un partenariat avec ce titre existe déjà pour cette entreprise." });
   }
+  const dateErr = validatePartenariatDates(date_debut, date_fin, date_prise_effet ?? existing.date_prise_effet);
+  if (dateErr) return res.status(400).json({ message: dateErr });
 
   const now = new Date().toISOString();
   await partenariatsCol.updateOne(
@@ -471,22 +644,31 @@ app.put("/api/partenariats/:id", requireUser, async (req, res) => {
         statut,
         description,
         created_by: existing.created_by != null ? String(existing.created_by) : null,
-        company_name: existing.company_name ?? null,
+        company_name: companyName,
         updated_at: now,
       },
     }
   );
+  await userLogsCol.insertOne({
+    user_id: req.userId,
+    action: "update_partenariat",
+    details: `${existing.titre} (id: ${id})`,
+    created_at: now,
+  }).catch(() => {});
   const row = await partenariatsCol.findOne({ _id: oid });
   res.json(serializePartenariat(row));
 });
 
 app.delete("/api/partenariats/:id", requireUser, async (req, res) => {
+  if (!req.canDeletePartenariat) {
+    return res.status(403).json({ message: "Vous n'avez pas le droit de supprimer un partenariat." });
+  }
   const { id } = req.params;
   const oid = toObjectId(id, res);
   if (!oid) return;
   const existing = await partenariatsCol.findOne(
     { _id: oid },
-    { projection: { created_by: 1, company_name: 1 } }
+    { projection: { created_by: 1, company_name: 1, titre: 1 } }
   );
   if (!existing) {
     return res.status(404).json({ message: "Non trouvé" });
@@ -501,6 +683,12 @@ app.delete("/api/partenariats/:id", requireUser, async (req, res) => {
   if (result.deletedCount === 0) {
     return res.status(404).json({ message: "Non trouvé" });
   }
+  await userLogsCol.insertOne({
+    user_id: req.userId,
+    action: "delete_partenariat",
+    details: `${existing.titre || id} (id: ${id})`,
+    created_at: new Date().toISOString(),
+  }).catch(() => {});
   res.status(204).end();
 });
 

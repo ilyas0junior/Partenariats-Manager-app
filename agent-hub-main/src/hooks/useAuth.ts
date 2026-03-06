@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-export type UserRole = "admin" | "spectate";
+export type UserRole = "admin" | "editor" | "spectate" | "ajouter" | "modifier" | "suppression";
 
 export interface LocalUser {
   id: string;
@@ -8,11 +8,17 @@ export interface LocalUser {
   fullName: string;
   role: UserRole;
   nickname: string;
+  /** JWT renvoyé au login, utilisé pour Authorization: Bearer (optionnel) */
+  token?: string;
+  /** Only for admin/editor; admin = all true, editor = from backend */
+  canCreatePartenariat?: boolean;
+  canEditPartenariat?: boolean;
+  canDeletePartenariat?: boolean;
 }
 
 const STORAGE_KEY = "local_auth_user";
 export const AUTH_STORAGE_KEY = STORAGE_KEY;
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
+const API_BASE = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "" : "http://localhost:4000");
 
 /** These emails are always treated as admin (fallback if role not synced). */
 export const ADMIN_EMAILS = ["admin@local", "ilyas@local"];
@@ -23,12 +29,22 @@ export function isAdminUser(session: LocalUser | null): boolean {
   return Boolean(session.email && ADMIN_EMAILS.includes(session.email));
 }
 
+/** True if user has at least one permission on partenariats (create, edit or delete). */
+export function canEditPartenariats(session: LocalUser | null): boolean {
+  if (!session) return false;
+  return Boolean(session.canCreatePartenariat || session.canEditPartenariat || session.canDeletePartenariat);
+}
+
 interface AuthContextValue {
   session: LocalUser | null;
   loading: boolean;
   signOut: () => void;
   setSession: (user: LocalUser | null) => void;
   isAdmin: boolean;
+  canEditPartenariats: boolean;
+  canCreatePartenariat: boolean;
+  canEditPartenariat: boolean;
+  canDeletePartenariat: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -59,16 +75,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setSession(parsed);
         setLoading(false);
       }
+      const meHeaders: HeadersInit = { "X-User-Id": parsed.id };
+      if (parsed.token) meHeaders["Authorization"] = `Bearer ${parsed.token}`;
       // Refresh session from server (fixes stale or missing role)
-      fetch(`${API_BASE}/api/me`, { headers: { "X-User-Id": parsed.id } })
+      fetch(`${API_BASE}/api/me`, { headers: meHeaders })
         .then((res) => (res.ok ? res.json() : Promise.reject(res)))
         .then((user) => {
+          const role = user.role as LocalUser["role"];
           const full: LocalUser = {
             id: String(user.id),
             email: user.email,
             fullName: user.fullName ?? user.full_name ?? "",
-            role: user.role === "admin" ? "admin" : "spectate",
+            role,
             nickname: user.nickname ?? user.fullName ?? user.email ?? "",
+            token: parsed.token,
+            canCreatePartenariat: user.canCreatePartenariat ?? (role === "admin" || role === "editor" || role === "ajouter"),
+            canEditPartenariat: user.canEditPartenariat ?? (role === "admin" || role === "editor" || role === "modifier"),
+            canDeletePartenariat: user.canDeletePartenariat ?? (role === "admin" || role === "editor" || role === "suppression"),
           };
           setSession(full);
           persistSession(full);
@@ -97,10 +120,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const isAdmin = isAdminUser(session);
+  const canEditPartenariatsFlag = canEditPartenariats(session);
+  const canCreatePartenariat = Boolean(session?.canCreatePartenariat);
+  const canEditPartenariat = Boolean(session?.canEditPartenariat);
+  const canDeletePartenariat = Boolean(session?.canDeletePartenariat);
 
   return React.createElement(
     AuthContext.Provider,
-    { value: { session, loading, signOut, setSession: setSessionAndPersist, isAdmin } },
+    {
+      value: {
+        session,
+        loading,
+        signOut,
+        setSession: setSessionAndPersist,
+        isAdmin,
+        canEditPartenariats: canEditPartenariatsFlag,
+        canCreatePartenariat,
+        canEditPartenariat,
+        canDeletePartenariat,
+      },
+    },
     children
   );
 };

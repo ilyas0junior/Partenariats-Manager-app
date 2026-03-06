@@ -14,12 +14,17 @@ interface PartenariatFormProps {
   onSubmit: (data: any) => void;
   partenariat?: Partenariat | null;
   loading?: boolean;
+  /** Si true, affiche le champ Entreprise pour affecter le partenariat à une entreprise */
+  isAdmin?: boolean;
+  /** Liste des noms d'entreprises (utilisateurs) pour le select */
+  companies?: string[];
 }
 
-const PartenariatForm = ({ open, onClose, onSubmit, partenariat, loading }: PartenariatFormProps) => {
+const PartenariatForm = ({ open, onClose, onSubmit, partenariat, loading, isAdmin, companies = [] }: PartenariatFormProps) => {
   const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm({
     defaultValues: {
       titre: partenariat?.titre || "",
+      company_name: partenariat?.company_name ?? "",
       type_partenariat: partenariat?.type_partenariat || "convention",
       nature: partenariat?.nature || "public",
       domaine: partenariat?.domaine || "sante",
@@ -40,8 +45,19 @@ const PartenariatForm = ({ open, onClose, onSubmit, partenariat, loading }: Part
   const entite_cnss = watch("entite_cnss");
   const entite_concernee = watch("entite_concernee");
   const statut = watch("statut");
+  const company_name = watch("company_name");
+
+  const date_debut = watch("date_debut");
+  const date_fin = watch("date_fin");
+  const date_prise_effet = watch("date_prise_effet");
 
   const handleFormSubmit = (data: any) => {
+    if (data.date_debut && data.date_fin && data.date_fin < data.date_debut) {
+      return; // validation message shown below
+    }
+    if (data.date_debut && data.date_prise_effet && data.date_prise_effet < data.date_debut) {
+      return;
+    }
     onSubmit(data);
     reset();
   };
@@ -58,6 +74,25 @@ const PartenariatForm = ({ open, onClose, onSubmit, partenariat, loading }: Part
               <Label htmlFor="titre">Titre du partenariat *</Label>
               <Input id="titre" {...register("titre", { required: true })} placeholder="Titre du projet de partenariat" />
             </div>
+
+            {isAdmin && companies.length > 0 && (
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Entreprise (affectation)</Label>
+                <Select
+                  value={company_name || "__none__"}
+                  onValueChange={(v) => setValue("company_name", v === "__none__" ? "" : v)}
+                >
+                  <SelectTrigger><SelectValue placeholder="Choisir une entreprise" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— Aucune (non affecté) —</SelectItem>
+                    {companies.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Les utilisateurs de cette entreprise pourront voir et gérer ce partenariat.</p>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="type_partenariat">Type *</Label>
@@ -131,12 +166,34 @@ const PartenariatForm = ({ open, onClose, onSubmit, partenariat, loading }: Part
 
             <div className="space-y-2">
               <Label htmlFor="date_fin">Date de fin</Label>
-              <Input id="date_fin" type="date" {...register("date_fin")} />
+              <Input
+                id="date_fin"
+                type="date"
+                min={date_debut || undefined}
+                {...register("date_fin", {
+                  validate: (v) =>
+                    !v || !date_debut || v >= date_debut || "La date de fin doit être postérieure ou égale à la date de début.",
+                })}
+              />
+              {errors.date_fin && (
+                <p className="text-xs text-destructive">{errors.date_fin.message as string}</p>
+              )}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="date_prise_effet">Date prise d&apos;effet</Label>
-              <Input id="date_prise_effet" type="date" {...register("date_prise_effet")} />
+              <Input
+                id="date_prise_effet"
+                type="date"
+                min={date_debut || undefined}
+                {...register("date_prise_effet", {
+                  validate: (v) =>
+                    !v || !date_debut || v >= date_debut || "La date de prise d'effet doit être postérieure ou égale à la date de début.",
+                })}
+              />
+              {errors.date_prise_effet && (
+                <p className="text-xs text-destructive">{errors.date_prise_effet.message as string}</p>
+              )}
             </div>
 
             <div className="space-y-2">

@@ -1,0 +1,47 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: agent-hub-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:20-alpine}
+    container_name: agent-hub-server
+    ports:
+      - "4000:4000"
+    environment:
+      MONGODB_URI: mongodb://mongo:27017
+      MONGODB_DB: agent_hub
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./agent-hub-main
+      dockerfile: Dockerfile
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:20-alpine}
+    container_name: agent-hub-web
+    ports:
+      - "8080:8080"
+    environment:
+      VITE_PROXY_TARGET: http://server:4000
+    depends_on:
+      - server
+
+volumes:
+  mongo_data:

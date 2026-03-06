@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { AUTH_STORAGE_KEY } from "@/hooks/useAuth";
 
 export interface Partenariat {
   id: string;
@@ -14,15 +15,29 @@ export interface Partenariat {
   date_prise_effet: string | null;
   statut: string;
   description: string | null;
+  company_name: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "" : "http://localhost:4000");
+
+function getStoredToken(): string | undefined {
+  try {
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) return undefined;
+    const p = JSON.parse(raw) as { token?: string };
+    return p?.token;
+  } catch {
+    return undefined;
+  }
+}
 
 function getAuthHeaders(userId?: string) {
   const h: Record<string, string> = {};
+  const token = getStoredToken();
+  if (token) h["Authorization"] = `Bearer ${token}`;
   if (userId) h["X-User-Id"] = String(userId);
   return h;
 }

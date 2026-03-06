@@ -10,6 +10,7 @@ import {
   useDeletePartenariat,
 } from "@/hooks/usePartenariats";
 import type { Partenariat } from "@/hooks/usePartenariats";
+import { useCompanies } from "@/hooks/useAdminUsers";
 import AppHeader from "@/components/AppHeader";
 import PartenariatStats from "@/components/PartenariatStats";
 import PartenariatTable from "@/components/PartenariatTable";
@@ -17,9 +18,10 @@ import PartenariatForm from "@/components/PartenariatForm";
 import PartenariatDetail from "@/components/PartenariatDetail";
 
 const Dashboard = () => {
-  const { session, signOut, isAdmin } = useAuth();
+  const { session, signOut, isAdmin, canCreatePartenariat, canEditPartenariat, canDeletePartenariat } = useAuth();
   const userId = session?.id;
   const { data: partenariats = [], isLoading } = usePartenariats(userId);
+  const { data: companies = [] } = useCompanies(userId, undefined, isAdmin);
   const createP = useCreatePartenariat(userId);
   const updateP = useUpdatePartenariat(userId);
   const deleteP = useDeletePartenariat(userId);
@@ -91,15 +93,17 @@ const Dashboard = () => {
               Gestion des Partenariats
             </h2>
             <p className="text-sm text-muted-foreground">
-              {isAdmin ? "Suivez et gérez tous les partenariats" : "Suivez et gérez vos partenariats"}
+              {isAdmin ? "Suivez et gérez tous les partenariats" : canCreatePartenariat || canEditPartenariat || canDeletePartenariat ? "Suivez et gérez vos partenariats" : "Consultez les partenariats (lecture seule)"}
             </p>
           </div>
-          <Button
-            onClick={() => setFormOpen(true)}
-            className="gradient-primary"
-          >
-            <Plus className="mr-2 h-4 w-4" /> Nouveau partenariat
-          </Button>
+          {canCreatePartenariat && (
+            <Button
+              onClick={() => setFormOpen(true)}
+              className="gradient-primary"
+            >
+              <Plus className="mr-2 h-4 w-4" /> Nouveau partenariat
+            </Button>
+          )}
         </div>
 
         <div className="animate-fade-in">
@@ -117,7 +121,9 @@ const Dashboard = () => {
               onEdit={setEditItem}
               onDelete={handleDelete}
               onView={setViewItem}
-              canModify={true}
+              canEdit={canEditPartenariat}
+              canDelete={canDeletePartenariat}
+              showCompany={isAdmin}
             />
           )}
         </div>
@@ -128,6 +134,8 @@ const Dashboard = () => {
         onClose={() => setFormOpen(false)}
         onSubmit={handleCreate}
         loading={createP.isPending}
+        isAdmin={isAdmin}
+        companies={companies}
       />
       <PartenariatForm
         open={!!editItem}
@@ -135,6 +143,8 @@ const Dashboard = () => {
         onSubmit={handleUpdate}
         partenariat={editItem}
         loading={updateP.isPending}
+        isAdmin={isAdmin}
+        companies={companies}
       />
       <PartenariatDetail
         partenariat={viewItem}

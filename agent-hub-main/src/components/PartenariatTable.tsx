@@ -16,12 +16,19 @@ interface Props {
   onView: (p: Partenariat) => void;
   /** If false, only "Voir" and export are available (spectator mode). */
   canModify?: boolean;
+  /** When set, overrides canModify for edit/delete actions. */
+  canEdit?: boolean;
+  canDelete?: boolean;
+  /** Afficher la colonne Entreprise (affectation) */
+  showCompany?: boolean;
 }
 
 const getLabel = (list: { value: string; label: string }[], value: string) =>
   list.find((i) => i.value === value)?.label || value;
 
-const PartenariatTable = ({ partenariats, onEdit, onDelete, onView, canModify = true }: Props) => {
+const PartenariatTable = ({ partenariats, onEdit, onDelete, onView, canModify = true, canEdit, canDelete, showCompany }: Props) => {
+  const allowEdit = canEdit !== undefined ? canEdit : canModify;
+  const allowDelete = canDelete !== undefined ? canDelete : canModify;
   const [search, setSearch] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
@@ -39,6 +46,7 @@ const PartenariatTable = ({ partenariats, onEdit, onDelete, onView, canModify = 
 
     const header = [
       "Titre",
+      ...(showCompany ? ["Entreprise"] : []),
       "Type",
       "Nature",
       "Domaine",
@@ -65,6 +73,7 @@ const PartenariatTable = ({ partenariats, onEdit, onDelete, onView, canModify = 
 
     const rows = filtered.map((p) => [
       p.titre,
+      ...(showCompany ? [p.company_name ?? ""] : []),
       getLabel(TYPES_PARTENARIAT, p.type_partenariat),
       p.nature,
       p.domaine,
@@ -123,6 +132,7 @@ const PartenariatTable = ({ partenariats, onEdit, onDelete, onView, canModify = 
           <TableHeader>
             <TableRow className="bg-muted/50">
               <TableHead className="font-semibold">Titre</TableHead>
+              {showCompany && <TableHead className="font-semibold">Entreprise</TableHead>}
               <TableHead className="font-semibold">Type</TableHead>
               <TableHead className="font-semibold">Partenaire</TableHead>
               <TableHead className="font-semibold">Entité CNSS</TableHead>
@@ -133,7 +143,7 @@ const PartenariatTable = ({ partenariats, onEdit, onDelete, onView, canModify = 
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                <TableCell colSpan={showCompany ? 7 : 6} className="h-32 text-center text-muted-foreground">
                   {search ? "Aucun résultat trouvé" : "Aucun partenariat enregistré"}
                 </TableCell>
               </TableRow>
@@ -144,6 +154,9 @@ const PartenariatTable = ({ partenariats, onEdit, onDelete, onView, canModify = 
                     <p className="font-medium text-foreground">{p.titre}</p>
                     <p className="text-xs text-muted-foreground">{p.domaine}</p>
                   </TableCell>
+                  {showCompany && (
+                    <TableCell className="text-muted-foreground">{p.company_name || "—"}</TableCell>
+                  )}
                   <TableCell className="text-muted-foreground">{getLabel(TYPES_PARTENARIAT, p.type_partenariat)}</TableCell>
                   <TableCell className="text-muted-foreground">{p.partenaire}</TableCell>
                   <TableCell className="text-muted-foreground">{getLabel(ENTITES_CNSS, p.entite_cnss)}</TableCell>
@@ -155,11 +168,11 @@ const PartenariatTable = ({ partenariats, onEdit, onDelete, onView, canModify = 
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => onView(p)}><Eye className="mr-2 h-4 w-4" /> Voir</DropdownMenuItem>
-                        {canModify && (
-                          <>
-                            <DropdownMenuItem onClick={() => onEdit(p)}><Pencil className="mr-2 h-4 w-4" /> Modifier</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setDeleteId(p.id)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Supprimer</DropdownMenuItem>
-                          </>
+                        {allowEdit && (
+                          <DropdownMenuItem onClick={() => onEdit(p)}><Pencil className="mr-2 h-4 w-4" /> Modifier</DropdownMenuItem>
+                        )}
+                        {allowDelete && (
+                          <DropdownMenuItem onClick={() => setDeleteId(p.id)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Supprimer</DropdownMenuItem>
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>

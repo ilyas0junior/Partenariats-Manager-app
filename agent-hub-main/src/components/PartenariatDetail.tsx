@@ -25,6 +25,9 @@ const PartenariatDetail = ({ partenariat, open, onClose }: Props) => {
   if (!partenariat) return null;
 
   const fields = [
+    ...(partenariat.company_name
+      ? [{ icon: Building, label: "Entreprise", value: partenariat.company_name }]
+      : []),
     { icon: FileText, label: "Type", value: getLabel(TYPES_PARTENARIAT, partenariat.type_partenariat) },
     { icon: Globe, label: "Nature", value: getLabel(NATURES, partenariat.nature) },
     { icon: Landmark, label: "Domaine", value: getLabel(DOMAINES, partenariat.domaine) },

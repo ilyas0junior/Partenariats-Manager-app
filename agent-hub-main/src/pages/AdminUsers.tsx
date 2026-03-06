@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Check, X, Pencil, UserCheck, Users, ScrollText } from "lucide-react";
+import { ArrowLeft, Check, X, Pencil, Users, ScrollText, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,17 +26,33 @@ import { useAuth } from "@/hooks/useAuth";
 import AppHeader from "@/components/AppHeader";
 import {
   useUsersList,
-  usePendingUsers,
   useUpdateUser,
   useCreateUser,
+  useSetUserPartenariats,
   useLogs,
   type AdminUser,
   type UserRole,
 } from "@/hooks/useAdminUsers";
+import { usePartenariats } from "@/hooks/usePartenariats";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const ROLE_LABELS: Record<UserRole, string> = {
-  admin: "Administrateur",
-  spectate: "Spectateur (lecture seule)",
+  admin: "Administrateur (accès total, toutes entreprises)",
+  editor: "Editeur (créer / modifier / supprimer, son entreprise)",
+  spectate: "Spectateur (lecture seule, son entreprise)",
+  ajouter: "Ajouter (créer uniquement, son entreprise)",
+  modifier: "Modifier (modifier uniquement, son entreprise)",
+  suppression: "Suppression (supprimer uniquement, son entreprise)",
+};
+
+const LOG_ACTION_LABELS: Record<string, string> = {
+  login: "Connexion",
+  create_partenariat: "Création partenariat",
+  update_partenariat: "Modif. partenariat",
+  delete_partenariat: "Suppr. partenariat",
+  create_user: "Création utilisateur",
+  update_user: "Modif. utilisateur",
 };
 
 const ADMIN_EMAILS = ["admin@local", "ilyas@local"];
@@ -47,10 +64,10 @@ export default function AdminUsers() {
   const displayName = session?.nickname || session?.fullName || session?.email || "";
 
   const { data: users = [], isLoading: loadingUsers, isError: errorUsers } = useUsersList(userId, userEmail);
-  const { data: pending = [], isLoading: loadingPending } = usePendingUsers(userId, userEmail);
   const { data: logs = [], isLoading: loadingLogs, isError: errorLogs } = useLogs(userId, userEmail);
   const updateUser = useUpdateUser(userId, userEmail);
   const createUser = useCreateUser(userId, userEmail);
+  const setUserPartenariats = useSetUserPartenariats(userId, userEmail);
   const { toast } = useToast();
 
   const [approveUser, setApproveUser] = useState<AdminUser | null>(null);
@@ -60,9 +77,15 @@ export default function AdminUsers() {
   const [editNickname, setEditNickname] = useState("");
   const [editRole, setEditRole] = useState<UserRole>("spectate");
   const [newFullName, setNewFullName] = useState("");
+  const [newRole, setNewRole] = useState<UserRole>("spectate");
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newCompanyName, setNewCompanyName] = useState("");
+  const [selectedPartenariatIds, setSelectedPartenariatIds] = useState<string[]>([]);
+  const [assignPartenariatsUser, setAssignPartenariatsUser] = useState<AdminUser | null>(null);
+  const [assignPartenariatsSelected, setAssignPartenariatsSelected] = useState<string[]>([]);
+
+  const { data: partenariats = [], isLoading: loadingPartenariats } = usePartenariats(userId ?? undefined);
 
   const handleApprove = () => {
     if (!approveUser) return;
@@ -101,6 +124,29 @@ export default function AdminUsers() {
     setEditUser(u);
     setEditNickname(u.nickname || u.fullName || "");
     setEditRole(u.role);
+  };
+
+  const openAssignPartenariats = (u: AdminUser) => {
+    setAssignPartenariatsUser(u);
+    const company = u.companyName?.trim() || "";
+    setAssignPartenariatsSelected(
+      partenariats.filter((p) => (p.company_name || "").trim() === company).map((p) => p.id)
+    );
+  };
+
+  const handleSaveAssignPartenariats = () => {
+    if (!assignPartenariatsUser) return;
+    setUserPartenariats.mutate(
+      { userId: assignPartenariatsUser.id, partenariatIds: assignPartenariatsSelected },
+      {
+        onSuccess: (data) => {
+          toast({ title: "Partenariats affectés", description: `${data.count} partenariat(s) lié(s) à l'entreprise.` });
+          setAssignPartenariatsUser(null);
+        },
+        onError: (e: Error) =>
+          toast({ title: "Erreur", description: e.message, variant: "destructive" }),
+      }
+    );
   };
 
   const handleSaveEdit = () => {
@@ -165,17 +211,8 @@ export default function AdminUsers() {
           </div>
         </div>
 
-        <Tabs defaultValue="pending" className="space-y-4">
+        <Tabs defaultValue="users" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="pending" className="gap-2">
-              <UserCheck className="h-4 w-4" />
-              Demandes (désactivé)
-              {pending.length > 0 && (
-                <span className="rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
-                  {pending.length}
-                </span>
-              )}
-            </TabsTrigger>
             <TabsTrigger value="users" className="gap-2">
               <Users className="h-4 w-4" />
               Utilisateurs
@@ -185,60 +222,6 @@ export default function AdminUsers() {
               Logs
             </TabsTrigger>
           </TabsList>
-
-          <TabsContent value="pending" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Inscription</CardTitle>
-                <CardDescription>
-                  L&apos;inscription publique est désactivée. Créez les comptes depuis l&apos;onglet
-                  Utilisateurs.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loadingPending ? (
-                  <p className="text-muted-foreground">Chargement...</p>
-                ) : pending.length === 0 ? (
-                  <p className="text-muted-foreground">Aucune demande en attente.</p>
-                ) : (
-                  <ul className="space-y-3">
-                    {pending.map((u) => (
-                      <li
-                        key={u.id}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card p-3"
-                      >
-                        <div>
-                          <p className="font-medium">{u.email}</p>
-                          <p className="text-sm text-muted-foreground">{u.fullName || "—"}</p>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setApproveUser(u);
-                              setApproveNickname(u.fullName || u.email || "");
-                              setApproveRole("spectate");
-                            }}
-                          >
-                            <Check className="mr-1 h-4 w-4" /> Approuver
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleReject(u)}
-                            disabled={updateUser.isPending}
-                          >
-                            <X className="mr-1 h-4 w-4" /> Refuser
-                          </Button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
 
           <TabsContent value="users" className="space-y-4">
             <Card>
@@ -293,8 +276,61 @@ export default function AdminUsers() {
                         placeholder="••••••••"
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label>Rôle</Label>
+                      <Select value={newRole} onValueChange={(v) => setNewRole(v as UserRole)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">{ROLE_LABELS.admin}</SelectItem>
+                          <SelectItem value="editor">{ROLE_LABELS.editor}</SelectItem>
+                          <SelectItem value="spectate">{ROLE_LABELS.spectate}</SelectItem>
+                          <SelectItem value="ajouter">{ROLE_LABELS.ajouter}</SelectItem>
+                          <SelectItem value="modifier">{ROLE_LABELS.modifier}</SelectItem>
+                          <SelectItem value="suppression">{ROLE_LABELS.suppression}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div className="mt-4 flex justify-end">
+
+                  <div className="mt-4 space-y-2 sm:col-span-2">
+                    <Label>Affecter des partenariats à l&apos;entreprise</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Cochez les partenariats qui seront visibles et gérables par cet utilisateur (entreprise : {newCompanyName || "—"}).
+                    </p>
+                    {loadingPartenariats ? (
+                      <p className="text-sm text-muted-foreground">Chargement des partenariats...</p>
+                    ) : partenariats.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Aucun partenariat. Créez-en depuis l&apos;accueil.</p>
+                    ) : (
+                      <ScrollArea className="h-48 rounded-md border border-border p-2">
+                        <div className="flex flex-col gap-2">
+                          {partenariats.map((p) => (
+                            <label
+                              key={p.id}
+                              className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/50"
+                            >
+                              <Checkbox
+                                checked={selectedPartenariatIds.includes(p.id)}
+                                onCheckedChange={(checked) => {
+                                  setSelectedPartenariatIds((prev) =>
+                                    checked ? [...prev, p.id] : prev.filter((id) => id !== p.id)
+                                  );
+                                }}
+                              />
+                              <span className="text-sm truncate">{p.titre}</span>
+                              {p.company_name && (
+                                <span className="text-xs text-muted-foreground shrink-0">({p.company_name})</span>
+                              )}
+                            </label>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    )}
+                  </div>
+
+                  <div className="mt-4 flex justify-end sm:col-span-2">
                     <Button
                       onClick={() => {
                         createUser.mutate(
@@ -303,6 +339,8 @@ export default function AdminUsers() {
                             companyName: newCompanyName.trim(),
                             email: newEmail.trim(),
                             password: newPassword,
+                            role: newRole,
+                            partenariatIds: selectedPartenariatIds.length > 0 ? selectedPartenariatIds : undefined,
                           },
                           {
                             onSuccess: () => {
@@ -311,6 +349,8 @@ export default function AdminUsers() {
                               setNewCompanyName("");
                               setNewEmail("");
                               setNewPassword("");
+                              setNewRole("spectate");
+                              setSelectedPartenariatIds([]);
                             },
                             onError: (e: Error) =>
                               toast({ title: "Erreur", description: e.message, variant: "destructive" }),
@@ -359,8 +399,12 @@ export default function AdminUsers() {
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="spectate">{ROLE_LABELS.spectate}</SelectItem>
                                   <SelectItem value="admin">{ROLE_LABELS.admin}</SelectItem>
+                                  <SelectItem value="editor">{ROLE_LABELS.editor}</SelectItem>
+                                  <SelectItem value="spectate">{ROLE_LABELS.spectate}</SelectItem>
+                                  <SelectItem value="ajouter">{ROLE_LABELS.ajouter}</SelectItem>
+                                  <SelectItem value="modifier">{ROLE_LABELS.modifier}</SelectItem>
+                                  <SelectItem value="suppression">{ROLE_LABELS.suppression}</SelectItem>
                                 </SelectContent>
                               </Select>
                             </td>
@@ -374,7 +418,7 @@ export default function AdminUsers() {
                                 ? new Date(u.lastLogin).toLocaleString("fr-FR")
                                 : "Jamais"}
                             </td>
-                            <td className="p-3">
+                            <td className="p-3 flex items-center gap-1">
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -382,6 +426,14 @@ export default function AdminUsers() {
                                 title="Modifier le pseudonyme"
                               >
                                 <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openAssignPartenariats(u)}
+                                title="Affecter des partenariats à cet utilisateur"
+                              >
+                                <Link2 className="h-4 w-4" />
                               </Button>
                             </td>
                           </tr>
@@ -444,9 +496,9 @@ export default function AdminUsers() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Historique des connexions</CardTitle>
+                <CardTitle>Historique des actions (connexions et modifications)</CardTitle>
                 <CardDescription>
-                  Chronologie des connexions (dernières 500 entrées).
+                  Connexions, créations et modifications de partenariats et d&apos;utilisateurs (500 dernières entrées).
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -455,7 +507,7 @@ export default function AdminUsers() {
                 ) : errorLogs ? (
                   <p className="text-destructive">Erreur lors du chargement. Vérifiez que le serveur tourne et que vous êtes connecté en tant qu&apos;admin. En cas de doute, déconnectez-vous puis reconnectez-vous.</p>
                 ) : logs.length === 0 ? (
-                  <p className="text-muted-foreground">Aucune connexion enregistrée.</p>
+                  <p className="text-muted-foreground">Aucune action enregistrée.</p>
                 ) : (
                   <div className="rounded-lg border border-border overflow-hidden">
                     <table className="w-full text-sm">
@@ -476,7 +528,7 @@ export default function AdminUsers() {
                             <td className="p-3">
                               {log.userNickname || log.userEmail || log.userId}
                             </td>
-                            <td className="p-3">{log.action}</td>
+                            <td className="p-3">{LOG_ACTION_LABELS[log.action] ?? log.action}</td>
                             <td className="p-3 text-muted-foreground">{log.details || "—"}</td>
                           </tr>
                         ))}
@@ -522,8 +574,12 @@ export default function AdminUsers() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="spectate">{ROLE_LABELS.spectate}</SelectItem>
                     <SelectItem value="admin">{ROLE_LABELS.admin}</SelectItem>
+                    <SelectItem value="editor">{ROLE_LABELS.editor}</SelectItem>
+                    <SelectItem value="spectate">{ROLE_LABELS.spectate}</SelectItem>
+                    <SelectItem value="ajouter">{ROLE_LABELS.ajouter}</SelectItem>
+                    <SelectItem value="modifier">{ROLE_LABELS.modifier}</SelectItem>
+                    <SelectItem value="suppression">{ROLE_LABELS.suppression}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -562,16 +618,17 @@ export default function AdminUsers() {
               </div>
               <div className="space-y-2">
                 <Label>Rôle</Label>
-                <Select
-                  value={editRole}
-                  onValueChange={(v) => setEditRole(v as UserRole)}
-                >
+                <Select value={editRole} onValueChange={(v) => setEditRole(v as UserRole)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="spectate">{ROLE_LABELS.spectate}</SelectItem>
                     <SelectItem value="admin">{ROLE_LABELS.admin}</SelectItem>
+                    <SelectItem value="editor">{ROLE_LABELS.editor}</SelectItem>
+                    <SelectItem value="spectate">{ROLE_LABELS.spectate}</SelectItem>
+                    <SelectItem value="ajouter">{ROLE_LABELS.ajouter}</SelectItem>
+                    <SelectItem value="modifier">{ROLE_LABELS.modifier}</SelectItem>
+                    <SelectItem value="suppression">{ROLE_LABELS.suppression}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -583,6 +640,73 @@ export default function AdminUsers() {
             </Button>
             <Button onClick={handleSaveEdit} disabled={updateUser.isPending}>
               Enregistrer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Affecter partenariats à un utilisateur */}
+      <Dialog
+        open={!!assignPartenariatsUser}
+        onOpenChange={(open) => !open && setAssignPartenariatsUser(null)}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Affecter des partenariats</DialogTitle>
+            <DialogDescription>
+              {assignPartenariatsUser && (
+                <>
+                  Utilisateur : {assignPartenariatsUser.email}
+                  {assignPartenariatsUser.companyName && (
+                    <> — Entreprise : <strong>{assignPartenariatsUser.companyName}</strong></>
+                  )}
+                  . Cochez les partenariats qui seront rattachés à son entreprise (visibles et gérables par cet utilisateur).
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          {assignPartenariatsUser && (
+            <div className="space-y-3 py-2">
+              {loadingPartenariats ? (
+                <p className="text-sm text-muted-foreground">Chargement des partenariats...</p>
+              ) : partenariats.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Aucun partenariat.</p>
+              ) : (
+                <ScrollArea className="h-64 rounded-md border border-border p-2">
+                  <div className="flex flex-col gap-2">
+                    {partenariats.map((p) => (
+                      <label
+                        key={p.id}
+                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/50"
+                      >
+                        <Checkbox
+                          checked={assignPartenariatsSelected.includes(p.id)}
+                          onCheckedChange={(checked) => {
+                            setAssignPartenariatsSelected((prev) =>
+                              checked ? [...prev, p.id] : prev.filter((id) => id !== p.id)
+                            );
+                          }}
+                        />
+                        <span className="text-sm truncate">{p.titre}</span>
+                        {p.company_name && (
+                          <span className="text-xs text-muted-foreground shrink-0">({p.company_name})</span>
+                        )}
+                      </label>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssignPartenariatsUser(null)}>
+              Annuler
+            </Button>
+            <Button
+              onClick={handleSaveAssignPartenariats}
+              disabled={setUserPartenariats.isPending || loadingPartenariats}
+            >
+              {setUserPartenariats.isPending ? "Enregistrement..." : "Enregistrer"}
             </Button>
           </DialogFooter>
         </DialogContent>

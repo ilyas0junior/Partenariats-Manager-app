@@ -1,4 +1,4 @@
-import { Handshake, LogOut, Users } from "lucide-react";
+import { LogOut, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
@@ -14,15 +14,22 @@ const AppHeader = ({ userName, isAdmin, onSignOut }: AppHeaderProps) => {
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6">
         <div className="flex items-center gap-3">
           <Link to="/" className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-primary">
-              <Handshake className="h-4 w-4 text-primary-foreground" />
-            </div>
+            <img
+              src="/cnss-logo.png"
+              alt="CNSS"
+              className="h-9 w-auto object-contain"
+            />
             <h1 className="text-lg font-bold text-foreground">Partenariats CNSS</h1>
           </Link>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           {userName && (
-            <span className="hidden text-sm text-muted-foreground sm:inline" title="Profil">{userName}</span>
+            <Button variant="ghost" size="sm" className="text-muted-foreground font-normal" asChild>
+              <Link to="/profile" title="Mon profil">
+                <span className="sm:hidden">Profil</span>
+                <span className="hidden sm:inline">{userName}</span>
+              </Link>
+            </Button>
           )}
           {isAdmin && (
             <Button variant="ghost" size="sm" asChild>
