@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Search, MoreHorizontal, Pencil, Trash2, Eye } from "lucide-react";
+import { Search, Pencil, Trash2, Eye } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import type { Partenariat } from "@/hooks/usePartenariats";
 import { TYPES_PARTENARIAT, ENTITES_CNSS } from "@/hooks/usePartenariats";
@@ -164,7 +164,7 @@ const PartenariatTable = ({ partenariats, onEdit, onDelete, onView, canModify = 
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="sm" className="h-8 px-2">Plus</Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => onView(p)}><Eye className="mr-2 h-4 w-4" /> Voir</DropdownMenuItem>

@@ -1,0 +1,83 @@
+# Lancer le projet en local (sans Docker full stack)
+
+## 1. Démarrer MongoDB
+
+**Option A – MongoDB avec Docker (un seul conteneur) :**
+```bash
+docker run -d --name mongo-local -p 27017:27017 mongo:7
+```
+
+**Option B – MongoDB installé sur la machine :**
+```bash
+# Linux (systemd)
+sudo systemctl start mongod
+
+# ou en manuel
+mongod --dbpath /path/to/data
+```
+
+---
+
+## 2. Backend (API, port 4000)
+
+```bash
+cd /home/black-kaiser/Desktop/agent-hub-main
+npm install
+npm run server
+```
+
+Garder ce terminal ouvert. L’API tourne sur http://localhost:4000.
+
+*(Optionnel : `MONGODB_URI=mongodb://localhost:27017 MONGODB_DB=agent_hub npm run server` si tu changes l’URI ou la base.)*
+
+---
+
+## 3. Frontend (Vite, port 8080) – dans un autre terminal
+
+```bash
+cd /home/black-kaiser/Desktop/agent-hub-main/agent-hub-main
+npm install
+npm run dev
+```
+
+Ouvrir http://localhost:8080 dans le navigateur. Le proxy envoie `/api` vers le backend.
+
+---
+
+## Résumé (copier-coller)
+
+cd /home/black-kaiser/Desktop/agent-hub-main && docker compose down && docker compose up -d
+[+] down 4/4
+ ✔ Container agent-hub-web        Removed                                                                                                                                                                                                 0.1s
+ ✔ Container agent-hub-server     Removed                                                                                                                                                                                                 0.0s
+ ✔ Container agent-hub-mongo      Removed                                                                                                                                                                                                 0.0s
+ ✔ Network agent-hub-main_default Removed                                                                                                                                                                                                 0.2s
+[+] up 4/4
+ ✔ Network agent-hub-main_default Created                                                                                                                                                                                                 0.1s
+ ✔ Container agent-hub-mongo      Healthy                                                                                                                                                                                                 8.0s
+ ✔ Container agent-hub-server     Started                                                                                                                                                                                                 8.3s
+ ✔ Container agent-hub-web        Started                                                                                                               
+
+**Terminal 1 – MongoDB (si Docker) :**
+```bash
+docker run -d --name mongo-local -p 27017:27017 mongo:7
+```
+
+**Terminal 2 – Backend :**
+```bash
+cd /home/black-kaiser/Desktop/agent-hub-main && npm install && npm run server
+```
+
+**Terminal 3 – Frontend :**
+```bash
+cd /home/black-kaiser/Desktop/agent-hub-main/agent-hub-main && npm install && npm run dev
+```
+
+Puis aller sur **http://localhost:8080**.
+
+---
+
+## Arrêter
+
+- Frontend / Backend : `Ctrl+C` dans chaque terminal.
+- MongoDB (Docker) : `docker stop mongo-local` puis `docker rm mongo-local` si besoin.

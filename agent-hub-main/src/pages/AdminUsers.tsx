@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Check, X, Pencil, Users, ScrollText, Link2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  X,
+  Pencil,
+  Users,
+  ScrollText,
+  Link2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,7 +27,13 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -60,11 +74,23 @@ const ADMIN_EMAILS = ["admin@local", "ilyas@local"];
 export default function AdminUsers() {
   const { session, signOut, isAdmin } = useAuth();
   const userId = session?.id;
-  const userEmail = session?.email && ADMIN_EMAILS.includes(session.email) ? session.email : undefined;
-  const displayName = session?.nickname || session?.fullName || session?.email || "";
+  const userEmail =
+    session?.email && ADMIN_EMAILS.includes(session.email)
+      ? session.email
+      : undefined;
+  const displayName =
+    session?.nickname || session?.fullName || session?.email || "";
 
-  const { data: users = [], isLoading: loadingUsers, isError: errorUsers } = useUsersList(userId, userEmail);
-  const { data: logs = [], isLoading: loadingLogs, isError: errorLogs } = useLogs(userId, userEmail);
+  const {
+    data: users = [],
+    isLoading: loadingUsers,
+    isError: errorUsers,
+  } = useUsersList(userId, userEmail);
+  const {
+    data: logs = [],
+    isLoading: loadingLogs,
+    isError: errorLogs,
+  } = useLogs(userId, userEmail);
   const updateUser = useUpdateUser(userId, userEmail);
   const createUser = useCreateUser(userId, userEmail);
   const setUserPartenariats = useSetUserPartenariats(userId, userEmail);
@@ -81,11 +107,17 @@ export default function AdminUsers() {
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newCompanyName, setNewCompanyName] = useState("");
-  const [selectedPartenariatIds, setSelectedPartenariatIds] = useState<string[]>([]);
-  const [assignPartenariatsUser, setAssignPartenariatsUser] = useState<AdminUser | null>(null);
-  const [assignPartenariatsSelected, setAssignPartenariatsSelected] = useState<string[]>([]);
+  const [selectedPartenariatIds, setSelectedPartenariatIds] = useState<
+    string[]
+  >([]);
+  const [assignPartenariatsUser, setAssignPartenariatsUser] =
+    useState<AdminUser | null>(null);
+  const [assignPartenariatsSelected, setAssignPartenariatsSelected] = useState<
+    string[]
+  >([]);
 
-  const { data: partenariats = [], isLoading: loadingPartenariats } = usePartenariats(userId ?? undefined);
+  const { data: partenariats = [], isLoading: loadingPartenariats } =
+    usePartenariats(userId ?? undefined);
 
   const handleApprove = () => {
     if (!approveUser) return;
@@ -93,7 +125,8 @@ export default function AdminUsers() {
       {
         id: approveUser.id,
         status: "approved",
-        nickname: approveNickname.trim() || approveUser.fullName || approveUser.email,
+        nickname:
+          approveNickname.trim() || approveUser.fullName || approveUser.email,
         role: approveRole,
       },
       {
@@ -104,8 +137,12 @@ export default function AdminUsers() {
           setApproveRole("spectate");
         },
         onError: (e: Error) =>
-          toast({ title: "Erreur", description: e.message, variant: "destructive" }),
-      }
+          toast({
+            title: "Erreur",
+            description: e.message,
+            variant: "destructive",
+          }),
+      },
     );
   };
 
@@ -115,8 +152,12 @@ export default function AdminUsers() {
       {
         onSuccess: () => toast({ title: "Demande refusée" }),
         onError: (e: Error) =>
-          toast({ title: "Erreur", description: e.message, variant: "destructive" }),
-      }
+          toast({
+            title: "Erreur",
+            description: e.message,
+            variant: "destructive",
+          }),
+      },
     );
   };
 
@@ -130,37 +171,57 @@ export default function AdminUsers() {
     setAssignPartenariatsUser(u);
     const company = u.companyName?.trim() || "";
     setAssignPartenariatsSelected(
-      partenariats.filter((p) => (p.company_name || "").trim() === company).map((p) => p.id)
+      partenariats
+        .filter((p) => (p.company_name || "").trim() === company)
+        .map((p) => p.id),
     );
   };
 
   const handleSaveAssignPartenariats = () => {
     if (!assignPartenariatsUser) return;
     setUserPartenariats.mutate(
-      { userId: assignPartenariatsUser.id, partenariatIds: assignPartenariatsSelected },
+      {
+        userId: assignPartenariatsUser.id,
+        partenariatIds: assignPartenariatsSelected,
+      },
       {
         onSuccess: (data) => {
-          toast({ title: "Partenariats affectés", description: `${data.count} partenariat(s) lié(s) à l'entreprise.` });
+          toast({
+            title: "Partenariats affectés",
+            description: `${data.count} partenariat(s) lié(s) à l'entreprise.`,
+          });
           setAssignPartenariatsUser(null);
         },
         onError: (e: Error) =>
-          toast({ title: "Erreur", description: e.message, variant: "destructive" }),
-      }
+          toast({
+            title: "Erreur",
+            description: e.message,
+            variant: "destructive",
+          }),
+      },
     );
   };
 
   const handleSaveEdit = () => {
     if (!editUser) return;
     updateUser.mutate(
-      { id: editUser.id, nickname: editNickname.trim() || editUser.email, role: editRole },
+      {
+        id: editUser.id,
+        nickname: editNickname.trim() || editUser.email,
+        role: editRole,
+      },
       {
         onSuccess: () => {
           toast({ title: "Utilisateur mis à jour" });
           setEditUser(null);
         },
         onError: (e: Error) =>
-          toast({ title: "Erreur", description: e.message, variant: "destructive" }),
-      }
+          toast({
+            title: "Erreur",
+            description: e.message,
+            variant: "destructive",
+          }),
+      },
     );
   };
 
@@ -171,8 +232,12 @@ export default function AdminUsers() {
       {
         onSuccess: () => toast({ title: "Rôle mis à jour" }),
         onError: (e: Error) =>
-          toast({ title: "Erreur", description: e.message, variant: "destructive" }),
-      }
+          toast({
+            title: "Erreur",
+            description: e.message,
+            variant: "destructive",
+          }),
+      },
     );
   };
 
@@ -181,7 +246,9 @@ export default function AdminUsers() {
       <div className="min-h-screen bg-background">
         <AppHeader userName={displayName} isAdmin={false} onSignOut={signOut} />
         <main className="mx-auto max-w-7xl p-4 sm:p-6">
-          <p className="text-muted-foreground">Accès réservé aux administrateurs.</p>
+          <p className="text-muted-foreground">
+            Accès réservé aux administrateurs.
+          </p>
           <Button asChild variant="link" className="mt-2">
             <Link to="/">Retour au tableau de bord</Link>
           </Button>
@@ -190,7 +257,9 @@ export default function AdminUsers() {
     );
   }
 
-  const approvedUsers = users.filter((u) => u.status === "approved" || !u.status);
+  const approvedUsers = users.filter(
+    (u) => u.status === "approved" || !u.status,
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -204,7 +273,9 @@ export default function AdminUsers() {
             </Link>
           </Button>
           <div>
-            <h2 className="text-2xl font-bold text-foreground">Gestion des utilisateurs</h2>
+            <h2 className="text-2xl font-bold text-foreground">
+              Gestion des utilisateurs
+            </h2>
             <p className="text-sm text-muted-foreground">
               Créer des comptes et gérer les rôles et pseudos
             </p>
@@ -228,14 +299,18 @@ export default function AdminUsers() {
               <CardHeader>
                 <CardTitle>Utilisateurs approuvés</CardTitle>
                 <CardDescription>
-                  Modifiez le pseudonyme (affiché dans le profil) et le rôle de chaque utilisateur.
+                  Modifiez le pseudonyme (affiché dans le profil) et le rôle de
+                  chaque utilisateur.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="mb-6 rounded-lg border border-border bg-card p-4">
-                  <h3 className="text-sm font-medium mb-3">Créer un utilisateur</h3>
+                  <h3 className="text-sm font-medium mb-3">
+                    Créer un utilisateur
+                  </h3>
                   <p className="text-xs text-muted-foreground mb-3">
-                    L&apos;utilisateur pourra modifier uniquement les données de son entreprise.
+                    L&apos;utilisateur pourra modifier uniquement les données de
+                    son entreprise.
                   </p>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="space-y-2">
@@ -278,17 +353,32 @@ export default function AdminUsers() {
                     </div>
                     <div className="space-y-2">
                       <Label>Rôle</Label>
-                      <Select value={newRole} onValueChange={(v) => setNewRole(v as UserRole)}>
+                      <Select
+                        value={newRole}
+                        onValueChange={(v) => setNewRole(v as UserRole)}
+                      >
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="admin">{ROLE_LABELS.admin}</SelectItem>
-                          <SelectItem value="editor">{ROLE_LABELS.editor}</SelectItem>
-                          <SelectItem value="spectate">{ROLE_LABELS.spectate}</SelectItem>
-                          <SelectItem value="ajouter">{ROLE_LABELS.ajouter}</SelectItem>
-                          <SelectItem value="modifier">{ROLE_LABELS.modifier}</SelectItem>
-                          <SelectItem value="suppression">{ROLE_LABELS.suppression}</SelectItem>
+                          <SelectItem value="admin">
+                            {ROLE_LABELS.admin}
+                          </SelectItem>
+                          <SelectItem value="editor">
+                            {ROLE_LABELS.editor}
+                          </SelectItem>
+                          <SelectItem value="spectate">
+                            {ROLE_LABELS.spectate}
+                          </SelectItem>
+                          <SelectItem value="ajouter">
+                            {ROLE_LABELS.ajouter}
+                          </SelectItem>
+                          <SelectItem value="modifier">
+                            {ROLE_LABELS.modifier}
+                          </SelectItem>
+                          <SelectItem value="suppression">
+                            {ROLE_LABELS.suppression}
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -297,12 +387,18 @@ export default function AdminUsers() {
                   <div className="mt-4 space-y-2 sm:col-span-2">
                     <Label>Affecter des partenariats à l&apos;entreprise</Label>
                     <p className="text-xs text-muted-foreground">
-                      Cochez les partenariats qui seront visibles et gérables par cet utilisateur (entreprise : {newCompanyName || "—"}).
+                      Cochez les partenariats qui seront visibles et gérables
+                      par cet utilisateur (entreprise : {newCompanyName || "—"}
+                      ).
                     </p>
                     {loadingPartenariats ? (
-                      <p className="text-sm text-muted-foreground">Chargement des partenariats...</p>
+                      <p className="text-sm text-muted-foreground">
+                        Chargement des partenariats... ssber m3ana{" "}
+                      </p>
                     ) : partenariats.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Aucun partenariat. Créez-en depuis l&apos;accueil.</p>
+                      <p className="text-sm text-muted-foreground">
+                        Aucun partenariat. Créez-en depuis l&apos;accueil.
+                      </p>
                     ) : (
                       <ScrollArea className="h-48 rounded-md border border-border p-2">
                         <div className="flex flex-col gap-2">
@@ -315,13 +411,19 @@ export default function AdminUsers() {
                                 checked={selectedPartenariatIds.includes(p.id)}
                                 onCheckedChange={(checked) => {
                                   setSelectedPartenariatIds((prev) =>
-                                    checked ? [...prev, p.id] : prev.filter((id) => id !== p.id)
+                                    checked
+                                      ? [...prev, p.id]
+                                      : prev.filter((id) => id !== p.id),
                                   );
                                 }}
                               />
-                              <span className="text-sm truncate">{p.titre}</span>
+                              <span className="text-sm truncate">
+                                {p.titre}
+                              </span>
                               {p.company_name && (
-                                <span className="text-xs text-muted-foreground shrink-0">({p.company_name})</span>
+                                <span className="text-xs text-muted-foreground shrink-0">
+                                  ({p.company_name})
+                                </span>
                               )}
                             </label>
                           ))}
@@ -340,7 +442,10 @@ export default function AdminUsers() {
                             email: newEmail.trim(),
                             password: newPassword,
                             role: newRole,
-                            partenariatIds: selectedPartenariatIds.length > 0 ? selectedPartenariatIds : undefined,
+                            partenariatIds:
+                              selectedPartenariatIds.length > 0
+                                ? selectedPartenariatIds
+                                : undefined,
                           },
                           {
                             onSuccess: () => {
@@ -353,8 +458,12 @@ export default function AdminUsers() {
                               setSelectedPartenariatIds([]);
                             },
                             onError: (e: Error) =>
-                              toast({ title: "Erreur", description: e.message, variant: "destructive" }),
-                          }
+                              toast({
+                                title: "Erreur",
+                                description: e.message,
+                                variant: "destructive",
+                              }),
+                          },
                         );
                       }}
                       disabled={createUser.isPending}
@@ -366,45 +475,72 @@ export default function AdminUsers() {
                 </div>
 
                 {loadingUsers ? (
-                  <p className="text-muted-foreground">Chargement...</p>
+                  <p className="text-muted-foreground">Chargement... (0x0)</p>
                 ) : errorUsers ? (
-                  <p className="text-destructive">Erreur lors du chargement des utilisateurs.</p>
+                  <p className="text-destructive">
+                    Erreur lors du chargement des utilisateurs.
+                  </p>
                 ) : approvedUsers.length === 0 ? (
-                  <p className="text-muted-foreground">Aucun utilisateur approuvé.</p>
+                  <p className="text-muted-foreground">
+                    Aucun utilisateur approuvé.
+                  </p>
                 ) : (
                   <div className="rounded-lg border border-border overflow-hidden">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-border bg-muted/50">
                           <th className="p-3 text-left font-medium">Email</th>
-                          <th className="p-3 text-left font-medium">Pseudonyme</th>
+                          <th className="p-3 text-left font-medium">
+                            Pseudonyme
+                          </th>
                           <th className="p-3 text-left font-medium">Rôle</th>
                           <th className="p-3 text-left font-medium">Créé le</th>
-                          <th className="p-3 text-left font-medium">Dernière connexion</th>
+                          <th className="p-3 text-left font-medium">
+                            Dernière connexion
+                          </th>
                           <th className="p-3 w-24"></th>
                         </tr>
                       </thead>
                       <tbody>
                         {approvedUsers.map((u) => (
-                          <tr key={u.id} className="border-b border-border last:border-0">
+                          <tr
+                            key={u.id}
+                            className="border-b border-border last:border-0"
+                          >
                             <td className="p-3">{u.email}</td>
-                            <td className="p-3">{u.nickname || u.fullName || "—"}</td>
+                            <td className="p-3">
+                              {u.nickname || u.fullName || "—"}
+                            </td>
                             <td className="p-3">
                               <Select
                                 value={u.role}
-                                onValueChange={(v) => handleRoleChange(u, v as UserRole)}
+                                onValueChange={(v) =>
+                                  handleRoleChange(u, v as UserRole)
+                                }
                                 disabled={updateUser.isPending}
                               >
                                 <SelectTrigger className="h-8 w-[180px]">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="admin">{ROLE_LABELS.admin}</SelectItem>
-                                  <SelectItem value="editor">{ROLE_LABELS.editor}</SelectItem>
-                                  <SelectItem value="spectate">{ROLE_LABELS.spectate}</SelectItem>
-                                  <SelectItem value="ajouter">{ROLE_LABELS.ajouter}</SelectItem>
-                                  <SelectItem value="modifier">{ROLE_LABELS.modifier}</SelectItem>
-                                  <SelectItem value="suppression">{ROLE_LABELS.suppression}</SelectItem>
+                                  <SelectItem value="admin">
+                                    {ROLE_LABELS.admin}
+                                  </SelectItem>
+                                  <SelectItem value="editor">
+                                    {ROLE_LABELS.editor}
+                                  </SelectItem>
+                                  <SelectItem value="spectate">
+                                    {ROLE_LABELS.spectate}
+                                  </SelectItem>
+                                  <SelectItem value="ajouter">
+                                    {ROLE_LABELS.ajouter}
+                                  </SelectItem>
+                                  <SelectItem value="modifier">
+                                    {ROLE_LABELS.modifier}
+                                  </SelectItem>
+                                  <SelectItem value="suppression">
+                                    {ROLE_LABELS.suppression}
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                             </td>
@@ -449,7 +585,9 @@ export default function AdminUsers() {
           <TabsContent value="logs" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Liste des utilisateurs et dernière connexion</CardTitle>
+                <CardTitle>
+                  Liste des utilisateurs et dernière connexion
+                </CardTitle>
                 <CardDescription>
                   Tous les comptes avec la date de leur dernière connexion.
                 </CardDescription>
@@ -458,7 +596,11 @@ export default function AdminUsers() {
                 {loadingUsers ? (
                   <p className="text-muted-foreground">Chargement...</p>
                 ) : errorUsers ? (
-                  <p className="text-destructive">Erreur lors du chargement. Vérifiez que le serveur tourne et que vous êtes connecté en tant qu&apos;admin. En cas de doute, déconnectez-vous puis reconnectez-vous.</p>
+                  <p className="text-destructive">
+                    Erreur lors du chargement. Vérifiez que le serveur tourne et
+                    que vous êtes connecté en tant qu&apos;admin. En cas de
+                    doute, déconnectez-vous puis reconnectez-vous.
+                  </p>
                 ) : users.length === 0 ? (
                   <p className="text-muted-foreground">Aucun utilisateur.</p>
                 ) : (
@@ -467,24 +609,59 @@ export default function AdminUsers() {
                       <thead>
                         <tr className="border-b border-border bg-muted/50">
                           <th className="p-3 text-left font-medium">Email</th>
-                          <th className="p-3 text-left font-medium">Pseudonyme</th>
+                          <th className="p-3 text-left font-medium">
+                            Pseudonyme
+                          </th>
                           <th className="p-3 text-left font-medium">Admin</th>
                           <th className="p-3 text-left font-medium">Créé le</th>
-                          <th className="p-3 text-left font-medium">Dernière connexion</th>
+                          <th className="p-3 text-left font-medium">
+                            Dernière connexion
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         {users.map((u) => {
-                          const createdStr = u.createdAt ? (() => { try { return new Date(u.createdAt).toLocaleString("fr-FR"); } catch { return "—"; } })() : "—";
-                          const lastStr = u.lastLogin ? (() => { try { return new Date(u.lastLogin).toLocaleString("fr-FR"); } catch { return "Jamais"; } })() : "Jamais";
+                          const createdStr = u.createdAt
+                            ? (() => {
+                                try {
+                                  return new Date(u.createdAt).toLocaleString(
+                                    "fr-FR",
+                                  );
+                                } catch {
+                                  return "—";
+                                }
+                              })()
+                            : "—";
+                          const lastStr = u.lastLogin
+                            ? (() => {
+                                try {
+                                  return new Date(u.lastLogin).toLocaleString(
+                                    "fr-FR",
+                                  );
+                                } catch {
+                                  return "Jamais";
+                                }
+                              })()
+                            : "Jamais";
                           return (
-                          <tr key={u.id} className="border-b border-border last:border-0">
-                            <td className="p-3">{u.email}</td>
-                            <td className="p-3">{u.nickname || u.fullName || "—"}</td>
-                            <td className="p-3">{u.role === "admin" ? "Oui" : "Non"}</td>
-                            <td className="p-3 text-muted-foreground">{createdStr}</td>
-                            <td className="p-3 text-muted-foreground">{lastStr}</td>
-                          </tr>
+                            <tr
+                              key={u.id}
+                              className="border-b border-border last:border-0"
+                            >
+                              <td className="p-3">{u.email}</td>
+                              <td className="p-3">
+                                {u.nickname || u.fullName || "—"}
+                              </td>
+                              <td className="p-3">
+                                {u.role === "admin" ? "Oui" : "Non"}
+                              </td>
+                              <td className="p-3 text-muted-foreground">
+                                {createdStr}
+                              </td>
+                              <td className="p-3 text-muted-foreground">
+                                {lastStr}
+                              </td>
+                            </tr>
                           );
                         })}
                       </tbody>
@@ -496,40 +673,60 @@ export default function AdminUsers() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Historique des actions (connexions et modifications)</CardTitle>
+                <CardTitle>
+                  Historique des actions (connexions et modifications)
+                </CardTitle>
                 <CardDescription>
-                  Connexions, créations et modifications de partenariats et d&apos;utilisateurs (500 dernières entrées).
+                  Connexions, créations et modifications de partenariats et
+                  d&apos;utilisateurs (500 dernières entrées).
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {loadingLogs ? (
                   <p className="text-muted-foreground">Chargement...</p>
                 ) : errorLogs ? (
-                  <p className="text-destructive">Erreur lors du chargement. Vérifiez que le serveur tourne et que vous êtes connecté en tant qu&apos;admin. En cas de doute, déconnectez-vous puis reconnectez-vous.</p>
+                  <p className="text-destructive">
+                    Erreur lors du chargement. Vérifiez que le serveur tourne et
+                    que vous êtes connecté en tant qu&apos;admin. En cas de
+                    doute, déconnectez-vous puis reconnectez-vous.
+                  </p>
                 ) : logs.length === 0 ? (
-                  <p className="text-muted-foreground">Aucune action enregistrée.</p>
+                  <p className="text-muted-foreground">
+                    Aucune action enregistrée.
+                  </p>
                 ) : (
                   <div className="rounded-lg border border-border overflow-hidden">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-border bg-muted/50">
-                          <th className="p-3 text-left font-medium">Date / Heure</th>
-                          <th className="p-3 text-left font-medium">Utilisateur</th>
+                          <th className="p-3 text-left font-medium">
+                            Date / Heure
+                          </th>
+                          <th className="p-3 text-left font-medium">
+                            Utilisateur
+                          </th>
                           <th className="p-3 text-left font-medium">Action</th>
                           <th className="p-3 text-left font-medium">Détails</th>
                         </tr>
                       </thead>
                       <tbody>
                         {logs.map((log) => (
-                          <tr key={log.id} className="border-b border-border last:border-0">
+                          <tr
+                            key={log.id}
+                            className="border-b border-border last:border-0"
+                          >
                             <td className="p-3 text-muted-foreground">
                               {new Date(log.createdAt).toLocaleString("fr-FR")}
                             </td>
                             <td className="p-3">
                               {log.userNickname || log.userEmail || log.userId}
                             </td>
-                            <td className="p-3">{LOG_ACTION_LABELS[log.action] ?? log.action}</td>
-                            <td className="p-3 text-muted-foreground">{log.details || "—"}</td>
+                            <td className="p-3">
+                              {LOG_ACTION_LABELS[log.action] ?? log.action}
+                            </td>
+                            <td className="p-3 text-muted-foreground">
+                              {log.details || "—"}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -576,10 +773,18 @@ export default function AdminUsers() {
                   <SelectContent>
                     <SelectItem value="admin">{ROLE_LABELS.admin}</SelectItem>
                     <SelectItem value="editor">{ROLE_LABELS.editor}</SelectItem>
-                    <SelectItem value="spectate">{ROLE_LABELS.spectate}</SelectItem>
-                    <SelectItem value="ajouter">{ROLE_LABELS.ajouter}</SelectItem>
-                    <SelectItem value="modifier">{ROLE_LABELS.modifier}</SelectItem>
-                    <SelectItem value="suppression">{ROLE_LABELS.suppression}</SelectItem>
+                    <SelectItem value="spectate">
+                      {ROLE_LABELS.spectate}
+                    </SelectItem>
+                    <SelectItem value="ajouter">
+                      {ROLE_LABELS.ajouter}
+                    </SelectItem>
+                    <SelectItem value="modifier">
+                      {ROLE_LABELS.modifier}
+                    </SelectItem>
+                    <SelectItem value="suppression">
+                      {ROLE_LABELS.suppression}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -589,10 +794,7 @@ export default function AdminUsers() {
             <Button variant="outline" onClick={() => setApproveUser(null)}>
               Annuler
             </Button>
-            <Button
-              onClick={handleApprove}
-              disabled={updateUser.isPending}
-            >
+            <Button onClick={handleApprove} disabled={updateUser.isPending}>
               Approuver
             </Button>
           </DialogFooter>
@@ -600,7 +802,10 @@ export default function AdminUsers() {
       </Dialog>
 
       {/* Edit user dialog */}
-      <Dialog open={!!editUser} onOpenChange={(open) => !open && setEditUser(null)}>
+      <Dialog
+        open={!!editUser}
+        onOpenChange={(open) => !open && setEditUser(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Modifier l&apos;utilisateur</DialogTitle>
@@ -618,17 +823,28 @@ export default function AdminUsers() {
               </div>
               <div className="space-y-2">
                 <Label>Rôle</Label>
-                <Select value={editRole} onValueChange={(v) => setEditRole(v as UserRole)}>
+                <Select
+                  value={editRole}
+                  onValueChange={(v) => setEditRole(v as UserRole)}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="admin">{ROLE_LABELS.admin}</SelectItem>
                     <SelectItem value="editor">{ROLE_LABELS.editor}</SelectItem>
-                    <SelectItem value="spectate">{ROLE_LABELS.spectate}</SelectItem>
-                    <SelectItem value="ajouter">{ROLE_LABELS.ajouter}</SelectItem>
-                    <SelectItem value="modifier">{ROLE_LABELS.modifier}</SelectItem>
-                    <SelectItem value="suppression">{ROLE_LABELS.suppression}</SelectItem>
+                    <SelectItem value="spectate">
+                      {ROLE_LABELS.spectate}
+                    </SelectItem>
+                    <SelectItem value="ajouter">
+                      {ROLE_LABELS.ajouter}
+                    </SelectItem>
+                    <SelectItem value="modifier">
+                      {ROLE_LABELS.modifier}
+                    </SelectItem>
+                    <SelectItem value="suppression">
+                      {ROLE_LABELS.suppression}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -658,9 +874,14 @@ export default function AdminUsers() {
                 <>
                   Utilisateur : {assignPartenariatsUser.email}
                   {assignPartenariatsUser.companyName && (
-                    <> — Entreprise : <strong>{assignPartenariatsUser.companyName}</strong></>
+                    <>
+                      {" "}
+                      — Entreprise :{" "}
+                      <strong>{assignPartenariatsUser.companyName}</strong>
+                    </>
                   )}
-                  . Cochez les partenariats qui seront rattachés à son entreprise (visibles et gérables par cet utilisateur).
+                  . Cochez les partenariats qui seront rattachés à son
+                  entreprise (visibles et gérables par cet utilisateur).
                 </>
               )}
             </DialogDescription>
@@ -668,9 +889,13 @@ export default function AdminUsers() {
           {assignPartenariatsUser && (
             <div className="space-y-3 py-2">
               {loadingPartenariats ? (
-                <p className="text-sm text-muted-foreground">Chargement des partenariats...</p>
+                <p className="text-sm text-muted-foreground">
+                  Chargement des partenariats...
+                </p>
               ) : partenariats.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Aucun partenariat.</p>
+                <p className="text-sm text-muted-foreground">
+                  Aucun partenariat.
+                </p>
               ) : (
                 <ScrollArea className="h-64 rounded-md border border-border p-2">
                   <div className="flex flex-col gap-2">
@@ -683,13 +908,17 @@ export default function AdminUsers() {
                           checked={assignPartenariatsSelected.includes(p.id)}
                           onCheckedChange={(checked) => {
                             setAssignPartenariatsSelected((prev) =>
-                              checked ? [...prev, p.id] : prev.filter((id) => id !== p.id)
+                              checked
+                                ? [...prev, p.id]
+                                : prev.filter((id) => id !== p.id),
                             );
                           }}
                         />
                         <span className="text-sm truncate">{p.titre}</span>
                         {p.company_name && (
-                          <span className="text-xs text-muted-foreground shrink-0">({p.company_name})</span>
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            ({p.company_name})
+                          </span>
                         )}
                       </label>
                     ))}
@@ -699,14 +928,19 @@ export default function AdminUsers() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAssignPartenariatsUser(null)}>
+            <Button
+              variant="outline"
+              onClick={() => setAssignPartenariatsUser(null)}
+            >
               Annuler
             </Button>
             <Button
               onClick={handleSaveAssignPartenariats}
               disabled={setUserPartenariats.isPending || loadingPartenariats}
             >
-              {setUserPartenariats.isPending ? "Enregistrement..." : "Enregistrer"}
+              {setUserPartenariats.isPending
+                ? "Enregistrement..."
+                : "Enregistrer"}
             </Button>
           </DialogFooter>
         </DialogContent>
