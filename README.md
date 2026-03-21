@@ -37,7 +37,7 @@ npm run dev
 
 ## Project Structure
 
-```
+`
 agent-hub-main/
 ├── server.mjs              # Backend: Express API, SQLite, auth + partenariats CRUD
 ├── data.db                 # SQLite database (created on first run)
@@ -79,7 +79,7 @@ agent-hub-main/
             ├── StatsCards.tsx
             ├── AgentForm.tsx / AgentTable.tsx / AgentDetail.tsx  # Optional agents UI
             └── ui/                 # shadcn/ui components (Button, Dialog, Input, etc.)
-```
+
 
 ---
 
@@ -134,6 +134,7 @@ Then open **http://localhost:5173** and use **/auth** to log in.
 ​State Mapping:
 ​Request States: Consult, Modify, Cancel, Validate.
 ​Partnership States: Operational, Non-operational, To be renewed, Expired, In progress.
+
 ​--> B. Workflow & Processing Circuit
 ​The system must track the lifecycle of a partnership from creation to archiving.
 ​Key Actors & Roles:
@@ -144,6 +145,7 @@ Then open **http://localhost:5173** and use **/auth** to log in.
 ​DAJSCA: Archiving of signed deliverables.
 ​DCRP: Publication on the intranet.
 ​Notifications: The system must trigger email notifications to relevant collaborators (e.g., alerting the DCRP when a signed convention is ready for publication).
+
 ​--> C. Management Modules (User Interfaces)
 ​Login: Secure access.
 ​Home Dashboard: tailored to user profiles, showing tasks in progress, alerts, and stats.
@@ -151,6 +153,7 @@ Then open **http://localhost:5173** and use **/auth** to log in.
 ​Engagement Interface: Crucial Step. After signature, the responsible entity inputs specific commitments (engagements) for both parties, including frequencies and deployment dates.
 ​Modification & Validation: Allows editing of non-validated requests and changing the status of partnerships (e.g., switching from "Non-operational" to "Operational").
 ​Tracking (Suivi): A table allowing actions based on the current state (e.g., if "In Course," one can Consult, Modify, or Validate).
+
 --> ​D. Reporting & Dashboarding
 ​The tool requires robust data visualization and retrieval capabilities:
 ​Advanced Search: By keyword, partner, direction, date, etc.
@@ -163,6 +166,7 @@ Then open **http://localhost:5173** and use **/auth** to log in.
 ​E. Stock Management (Legacy Data)
 ​The system must allow the import ("injection") of existing/old partnerships to build the initial database.
 ​Alert System: Automated emails for partnerships nearing expiration to prompt renewal analysis.
+
 ​4. User Profiles & Access Control
 ​The document defines strict role-based access control (RBAC):
 ​Functional Administrator: Manages settings and reference tables.
@@ -170,6 +174,7 @@ Then open **http://localhost:5173** and use **/auth** to log in.
 ​Validation Profile: Validates requests.
 ​Consultation Profile: Read-only access for concerned entities.
 ​Modification Profile: Updates requests.
+
 ​5. Data Structure (Based on Annex 6)
 ​The "Situation de suivi" table gives us a glimpse of the required database schema. Key fields include:
 ​Partnership ID & Type (Framework Convention, Specific Protocol, Amendment).
