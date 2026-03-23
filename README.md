@@ -37,7 +37,7 @@ npm run dev
 
 ## Project Structure
 
-`
+```bash
 agent-hub-main/
 ├── server.mjs              # Backend: Express API, SQLite, auth + partenariats CRUD
 ├── data.db                 # SQLite database (created on first run)
@@ -79,12 +79,12 @@ agent-hub-main/
             ├── StatsCards.tsx
             ├── AgentForm.tsx / AgentTable.tsx / AgentDetail.tsx  # Optional agents UI
             └── ui/                 # shadcn/ui components (Button, Dialog, Input, etc.)
-
-
----
+```
+bash
 
 ## What Each Part Does
 
+```bash
 | Part | Role |
 |------|------|
 | **server.mjs** | Express server. Auth: register, login (JWT not used; session is managed by frontend with token/user in localStorage). Partenariats: CRUD, titre uniqueness. SQLite: `users`, `partenariats` (with `entite_concernee`, etc.). |
@@ -96,7 +96,7 @@ agent-hub-main/
 | **PartenariatForm** | Form fields aligned with backend (type, statut, entité concernée, etc.). |
 | **PartenariatTable** | List, search (titre, partenaire, domaine), export filtered list to CSV ("Exporter en Excel"). |
 | **PartenariatStats** | Counts by statut: Total, Opérationnels, Non opérationnels, Échus, À renouveler, En cours. |
-
+```
 ---
 
 ## Optional: Single-command run
@@ -163,7 +163,8 @@ Then open **http://localhost:5173** and use **/auth** to log in.
 ​Validation rates and average processing times.
 ​Export: Data must be exportable to Excel or PDF.
 
-​E. Stock Management (Legacy Data)
+​E. Stock Management (Legacy Data):
+
 ​The system must allow the import ("injection") of existing/old partnerships to build the initial database.
 ​Alert System: Automated emails for partnerships nearing expiration to prompt renewal analysis.
 
