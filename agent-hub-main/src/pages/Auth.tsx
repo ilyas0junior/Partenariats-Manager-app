@@ -86,8 +86,17 @@ const Auth = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md animate-fade-in">
+    <div className="relative flex min-h-screen items-center justify-center bg-background p-4">
+      <div
+        aria-hidden="true"
+        className="auth-login-bg pointer-events-none absolute inset-0 bg-cover bg-center"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/50 via-background/70 to-background"
+      />
+
+      <div className="relative z-10 w-full max-w-md animate-fade-in">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex justify-center">
             <img
@@ -104,7 +113,7 @@ const Auth = () => {
           </p>
         </div>
 
-        <Card className="shadow-elevated border-border">
+        <Card className="shadow-elevated border-border bg-card/85 backdrop-blur">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg">
               Connexion

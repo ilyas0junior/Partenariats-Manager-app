@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Search, Pencil, Trash2, Eye } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import type { Partenariat } from "@/hooks/usePartenariats";
@@ -106,83 +107,127 @@ const PartenariatTable = ({ partenariats, onEdit, onDelete, onView, canModify = 
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative max-w-sm w-full">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Rechercher un partenariat..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
-          />
+    <Card className="shadow-card">
+      <CardHeader className="gap-4 space-y-0 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <CardTitle className="text-lg">Partenariats</CardTitle>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {filtered.length} résultat(s){search ? " (filtré)" : ""}
+          </p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={exportToCsv}
-          disabled={filtered.length === 0}
-        >
-          Exporter en Excel
-        </Button>
-      </div>
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+          <div className="relative w-full sm:w-[320px]">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Rechercher un partenariat..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-10 pl-10"
+            />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={exportToCsv}
+            disabled={filtered.length === 0}
+            className="h-10"
+          >
+            Exporter en Excel
+          </Button>
+        </div>
+      </CardHeader>
 
-      <div className="rounded-lg border border-border bg-card shadow-card overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="font-semibold">Titre</TableHead>
-              {showCompany && <TableHead className="font-semibold">Entreprise</TableHead>}
-              <TableHead className="font-semibold">Type</TableHead>
-              <TableHead className="font-semibold">Partenaire</TableHead>
-              <TableHead className="font-semibold">Entité CNSS</TableHead>
-              <TableHead className="font-semibold">État</TableHead>
-              <TableHead className="w-12"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={showCompany ? 7 : 6} className="h-32 text-center text-muted-foreground">
-                  {search ? "Aucun résultat trouvé" : "Aucun partenariat enregistré"}
-                </TableCell>
+      <CardContent className="p-0">
+        <div className="overflow-hidden rounded-b-lg border-t border-border">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/40">
+                <TableHead className="font-semibold">Titre</TableHead>
+                {showCompany && (
+                  <TableHead className="font-semibold">Entreprise</TableHead>
+                )}
+                <TableHead className="font-semibold">Type</TableHead>
+                <TableHead className="font-semibold">Partenaire</TableHead>
+                <TableHead className="font-semibold">Entité CNSS</TableHead>
+                <TableHead className="font-semibold">État</TableHead>
+                <TableHead className="w-12"></TableHead>
               </TableRow>
-            ) : (
-              filtered.map((p) => (
-                <TableRow key={p.id} className="hover:bg-muted/30 transition-colors">
-                  <TableCell>
-                    <p className="font-medium text-foreground">{p.titre}</p>
-                    <p className="text-xs text-muted-foreground">{p.domaine}</p>
-                  </TableCell>
-                  {showCompany && (
-                    <TableCell className="text-muted-foreground">{p.company_name || "—"}</TableCell>
-                  )}
-                  <TableCell className="text-muted-foreground">{getLabel(TYPES_PARTENARIAT, p.type_partenariat)}</TableCell>
-                  <TableCell className="text-muted-foreground">{p.partenaire}</TableCell>
-                  <TableCell className="text-muted-foreground">{getLabel(ENTITES_CNSS, p.entite_cnss)}</TableCell>
-                  <TableCell><StatusBadge statut={p.statut} /></TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 px-2">Plus</Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onView(p)}><Eye className="mr-2 h-4 w-4" /> Voir</DropdownMenuItem>
-                        {allowEdit && (
-                          <DropdownMenuItem onClick={() => onEdit(p)}><Pencil className="mr-2 h-4 w-4" /> Modifier</DropdownMenuItem>
-                        )}
-                        {allowDelete && (
-                          <DropdownMenuItem onClick={() => setDeleteId(p.id)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Supprimer</DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+            </TableHeader>
+            <TableBody>
+              {filtered.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={showCompany ? 7 : 6}
+                    className="h-32 text-center text-muted-foreground"
+                  >
+                    {search ? "Aucun résultat trouvé" : "Aucun partenariat enregistré"}
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ) : (
+                filtered.map((p) => (
+                  <TableRow
+                    key={p.id}
+                    className="hover:bg-muted/30 transition-colors"
+                  >
+                    <TableCell className="py-4">
+                      <p className="font-medium text-foreground">{p.titre}</p>
+                      <p className="text-xs text-muted-foreground">{p.domaine}</p>
+                    </TableCell>
+                    {showCompany && (
+                      <TableCell className="text-muted-foreground">
+                        {p.company_name || "—"}
+                      </TableCell>
+                    )}
+                    <TableCell className="text-muted-foreground">
+                      {getLabel(TYPES_PARTENARIAT, p.type_partenariat)}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {p.partenaire}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {getLabel(ENTITES_CNSS, p.entite_cnss)}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge statut={p.statut} />
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2 text-muted-foreground hover:text-foreground"
+                          >
+                            Plus
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => onView(p)}>
+                            <Eye className="mr-2 h-4 w-4" /> Voir
+                          </DropdownMenuItem>
+                          {allowEdit && (
+                            <DropdownMenuItem onClick={() => onEdit(p)}>
+                              <Pencil className="mr-2 h-4 w-4" /> Modifier
+                            </DropdownMenuItem>
+                          )}
+                          {allowDelete && (
+                            <DropdownMenuItem
+                              onClick={() => setDeleteId(p.id)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
@@ -196,7 +241,7 @@ const PartenariatTable = ({ partenariats, onEdit, onDelete, onView, canModify = 
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </Card>
   );
 };
 

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -27,9 +28,20 @@ const Dashboard = () => {
   const deleteP = useDeletePartenariat(userId);
   const { toast } = useToast();
 
+  const [searchParams, setSearchParams] = useSearchParams();
   const [formOpen, setFormOpen] = useState(false);
   const [editItem, setEditItem] = useState<Partenariat | null>(null);
   const [viewItem, setViewItem] = useState<Partenariat | null>(null);
+
+  useEffect(() => {
+    const openId = searchParams.get("open");
+    if (!openId || isLoading) return;
+    const p = partenariats.find((x) => x.id === openId);
+    if (p) setViewItem(p);
+    const next = new URLSearchParams(searchParams);
+    next.delete("open");
+    setSearchParams(next, { replace: true });
+  }, [partenariats, isLoading, searchParams, setSearchParams]);
 
   const handleCreate = (data: any) => {
     createP.mutate(
@@ -83,27 +95,38 @@ const Dashboard = () => {
   const displayName = session?.nickname || session?.fullName || session?.email || "";
 
   return (
-    <div className="min-h-screen bg-background">
-      <AppHeader userName={displayName} isAdmin={isAdmin} onSignOut={signOut} />
+    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/30">
+      <AppHeader
+        userName={displayName}
+        isAdmin={isAdmin}
+        onSignOut={signOut}
+        userId={userId}
+      />
 
-      <main className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="animate-fade-in">
-            <h2 className="text-2xl font-bold text-foreground">
-              Gestion des Partenariats
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              {isAdmin ? "Suivez et gérez tous les partenariats" : canCreatePartenariat || canEditPartenariat || canDeletePartenariat ? "Suivez et gérez vos partenariats" : "Consultez les partenariats (lecture seule)"}
-            </p>
+      <main className="mx-auto max-w-7xl space-y-8 p-4 sm:p-6">
+        <div className="animate-fade-in rounded-xl border border-border bg-card/60 p-5 shadow-card backdrop-blur sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-foreground sm:text-3xl">
+                Gestion des Partenariats
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {isAdmin
+                  ? "Suivez et gérez tous les partenariats"
+                  : canCreatePartenariat || canEditPartenariat || canDeletePartenariat
+                    ? "Suivez et gérez vos partenariats"
+                    : "Consultez les partenariats (lecture seule)"}
+              </p>
+            </div>
+            {canCreatePartenariat && (
+              <Button
+                onClick={() => setFormOpen(true)}
+                className="gradient-primary shadow-elevated hover:opacity-95"
+              >
+                <Plus className="mr-2 h-4 w-4" /> Nouveau partenariat
+              </Button>
+            )}
           </div>
-          {canCreatePartenariat && (
-            <Button
-              onClick={() => setFormOpen(true)}
-              className="gradient-primary"
-            >
-              <Plus className="mr-2 h-4 w-4" /> Nouveau partenariat
-            </Button>
-          )}
         </div>
 
         <div className="animate-fade-in">

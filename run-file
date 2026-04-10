@@ -47,16 +47,6 @@ Ouvrir http://localhost:8080 dans le navigateur. Le proxy envoie `/api` vers le 
 ## Résumé (copier-coller)
 
 cd /home/black-kaiser/Desktop/agent-hub-main && docker compose down && docker compose up -d
-[+] down 4/4
- ✔ Container agent-hub-web        Removed                                                                                                                                                                                                 0.1s
- ✔ Container agent-hub-server     Removed                                                                                                                                                                                                 0.0s
- ✔ Container agent-hub-mongo      Removed                                                                                                                                                                                                 0.0s
- ✔ Network agent-hub-main_default Removed                                                                                                                                                                                                 0.2s
-[+] up 4/4
- ✔ Network agent-hub-main_default Created                                                                                                                                                                                                 0.1s
- ✔ Container agent-hub-mongo      Healthy                                                                                                                                                                                                 8.0s
- ✔ Container agent-hub-server     Started                                                                                                                                                                                                 8.3s
- ✔ Container agent-hub-web        Started                                                                                                               
 
 **Terminal 1 – MongoDB (si Docker) :**
 ```bash

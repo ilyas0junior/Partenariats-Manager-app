@@ -24,7 +24,7 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader userName={displayName} isAdmin={isAdmin} onSignOut={signOut} />
+      <AppHeader userName={displayName} isAdmin={isAdmin} onSignOut={signOut} userId={session.id} />
 
       <main className="mx-auto max-w-2xl space-y-6 p-4 sm:p-6">
         <div className="flex items-center gap-4">

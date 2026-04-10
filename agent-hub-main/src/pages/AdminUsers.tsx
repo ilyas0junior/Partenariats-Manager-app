@@ -244,7 +244,12 @@ export default function AdminUsers() {
   if (!isAdmin || !session) {
     return (
       <div className="min-h-screen bg-background">
-        <AppHeader userName={displayName} isAdmin={false} onSignOut={signOut} />
+        <AppHeader
+          userName={displayName}
+          isAdmin={false}
+          onSignOut={signOut}
+          userId={session?.id}
+        />
         <main className="mx-auto max-w-7xl p-4 sm:p-6">
           <p className="text-muted-foreground">
             Accès réservé aux administrateurs.
@@ -263,7 +268,7 @@ export default function AdminUsers() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader userName={displayName} isAdmin onSignOut={signOut} />
+      <AppHeader userName={displayName} isAdmin onSignOut={signOut} userId={session?.id} />
 
       <main className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
         <div className="flex items-center gap-4">

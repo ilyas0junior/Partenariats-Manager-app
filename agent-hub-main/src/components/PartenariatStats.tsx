@@ -26,9 +26,9 @@ const PartenariatStats = ({ partenariats }: Props) => {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
       {stats.map((stat) => (
-        <Card key={stat.label} className="shadow-card border-border hover:shadow-elevated transition-shadow">
+        <Card key={stat.label} className="shadow-card border-border transition-shadow hover:shadow-elevated">
           <CardContent className="flex items-center gap-4 p-5">
-            <div className={`flex h-11 w-11 items-center justify-center rounded-lg bg-muted ${stat.color}`}>
+            <div className={`flex h-11 w-11 items-center justify-center rounded-lg bg-muted/60 ring-1 ring-border ${stat.color}`}>
               <stat.icon className="h-5 w-5" />
             </div>
             <div>
