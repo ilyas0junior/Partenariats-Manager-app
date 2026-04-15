@@ -17,6 +17,7 @@ import PartenariatStats from "@/components/PartenariatStats";
 import PartenariatTable from "@/components/PartenariatTable";
 import PartenariatForm from "@/components/PartenariatForm";
 import PartenariatDetail from "@/components/PartenariatDetail";
+import type { PartenariatFormValues } from "@/components/PartenariatForm";
 
 const Dashboard = () => {
   const { session, signOut, isAdmin, canCreatePartenariat, canEditPartenariat, canDeletePartenariat } = useAuth();
@@ -43,7 +44,7 @@ const Dashboard = () => {
     setSearchParams(next, { replace: true });
   }, [partenariats, isLoading, searchParams, setSearchParams]);
 
-  const handleCreate = (data: any) => {
+  const handleCreate = (data: PartenariatFormValues) => {
     createP.mutate(
       data,
       {
@@ -51,17 +52,17 @@ const Dashboard = () => {
           toast({ title: "Partenariat créé avec succès" });
           setFormOpen(false);
         },
-        onError: (err: any) =>
+        onError: (err: unknown) =>
           toast({
             title: "Erreur",
-            description: err.message,
+            description: err instanceof Error ? err.message : "Erreur lors de la création.",
             variant: "destructive",
           }),
       },
     );
   };
 
-  const handleUpdate = (data: any) => {
+  const handleUpdate = (data: PartenariatFormValues) => {
     if (!editItem) return;
     updateP.mutate(
       { id: editItem.id, ...data },
@@ -70,10 +71,10 @@ const Dashboard = () => {
           toast({ title: "Partenariat mis à jour avec succès" });
           setEditItem(null);
         },
-        onError: (err: any) =>
+        onError: (err: unknown) =>
           toast({
             title: "Erreur technique",
-            description: err.message,
+            description: err instanceof Error ? err.message : "Erreur lors de la mise à jour.",
             variant: "destructive",
           }),
       }
@@ -83,10 +84,10 @@ const Dashboard = () => {
   const handleDelete = (id: string) => {
     deleteP.mutate(id, {
       onSuccess: () => toast({ title: "Partenariat supprimé" }),
-      onError: (err: any) =>
+      onError: (err: unknown) =>
         toast({
           title: "Erreur",
-          description: err.message,
+          description: err instanceof Error ? err.message : "Erreur lors de la suppression.",
           variant: "destructive",
         }),
     });

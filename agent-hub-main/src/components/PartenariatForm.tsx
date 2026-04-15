@@ -8,10 +8,26 @@ import { Textarea } from "@/components/ui/textarea";
 import type { Partenariat } from "@/hooks/usePartenariats";
 import { TYPES_PARTENARIAT, NATURES, DOMAINES, ENTITES_CNSS, STATUTS } from "@/hooks/usePartenariats";
 
+export type PartenariatFormValues = {
+  titre: string;
+  company_name: string;
+  type_partenariat: string;
+  nature: string;
+  domaine: string;
+  entite_cnss: string;
+  entite_concernee: string;
+  partenaire: string;
+  date_debut: string;
+  date_fin: string;
+  date_prise_effet: string;
+  statut: string;
+  description: string;
+};
+
 interface PartenariatFormProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: PartenariatFormValues) => void;
   partenariat?: Partenariat | null;
   loading?: boolean;
   /** Si true, affiche le champ Entreprise pour affecter le partenariat à une entreprise */
@@ -51,7 +67,7 @@ const PartenariatForm = ({ open, onClose, onSubmit, partenariat, loading, isAdmi
   const date_fin = watch("date_fin");
   const date_prise_effet = watch("date_prise_effet");
 
-  const handleFormSubmit = (data: any) => {
+  const handleFormSubmit = (data: PartenariatFormValues) => {
     if (data.date_debut && data.date_fin && data.date_fin < data.date_debut) {
       return; // validation message shown below
     }

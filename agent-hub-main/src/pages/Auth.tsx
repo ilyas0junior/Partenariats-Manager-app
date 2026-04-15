@@ -43,12 +43,13 @@ const Auth = () => {
       const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        const message =
-          (data &&
-            typeof data === "object" &&
-            "message" in data &&
-            (data as any).message) ||
-          "Erreur lors de la connexion.";
+        const message = (() => {
+          if (data && typeof data === "object" && "message" in data) {
+            const m = (data as { message?: unknown }).message;
+            if (typeof m === "string") return m;
+          }
+          return "Erreur lors de la connexion.";
+        })();
         throw new Error(String(message));
       }
 
@@ -74,10 +75,10 @@ const Auth = () => {
       });
       const goToAdmin = user.role === "admin" || (user.email && ADMIN_EMAILS.includes(user.email));
       navigate(goToAdmin ? "/admin/users" : "/", { replace: true });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Erreur",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Erreur lors de la connexion.",
         variant: "destructive",
       });
     } finally {

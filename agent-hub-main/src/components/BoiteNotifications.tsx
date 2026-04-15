@@ -51,10 +51,11 @@ const BoiteNotifications = ({ userId }: BoiteNotificationsProps) => {
   const [open, setOpen] = useState(false);
   const [ackTick, setAckTick] = useState(0);
 
-  const ackMap = useMemo(
-    () => (userId ? readAckMap(userId) : {}),
-    [userId, ackTick],
-  );
+  const ackMap = useMemo(() => {
+    // force recompute when local ack changes
+    void ackTick;
+    return userId ? readAckMap(userId) : {};
+  }, [userId, ackTick]);
 
   const items = useMemo(
     () => buildBoiteNotifications(partenariats, ackMap),
